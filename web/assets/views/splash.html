@@ -1,0 +1,49 @@
+<div class="container mt-3">
+    <div class="jumbotron">
+        <h1 class="display-3">Eensy Aquaponics <small> <i class="fas fa-seedling text-success"></i> <i
+                    class="fas fa-fish text-info"></i></small></h1>
+        <p class="lead">Soiless urban farming setup. Technology assisted farming of the future</p>
+        <hr class="my-4">
+        <p>What started as a small hobby setup in a farmhouse backyard, has grown into a serious business of food
+            production. We use digital technology aided by electronic sensors on the ground to remote control the
+            ecosystem.</p>
+        <p class="lead">
+            <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+        </p>
+    </div>
+</div>
+
+<div class="container" ng-controller="loginCtrl">
+    <form>
+        <fieldset>
+            <div class="form-group">
+                <label for="exampleInputEmail1">User ID</label>
+                <input  
+                ng-model="login.usrid" 
+                type="text" class="form-control" 
+                ng-class="{true:'is-invalid'}[validationErr==true && login.usrid=='']"
+                id="exampleInputEmail1"
+                aria-describedby="emailHelp" placeholder="Enter ID">
+            </div>
+            <div class="form-group">
+                <label for="exampleInputPassword1">Password</label>
+                <input ng-model="login.passwd" type="password" 
+                class="form-control" id="exampleInputPassword1"
+                ng-class="{true:'is-invalid'}[validationErr==true && login.passwd=='']"
+                placeholder="Password">
+            </div>
+            
+            <button 
+            ng-click="login.submit()" 
+            type="submit" class="btn btn-outline-primary"
+            >
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </fieldset>
+    </form>
+    <div class="alert alert-dismissible alert-warning mt-4" ng-show="loginErr">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <h4 class="alert-heading">Ooops!</h4>
+        <p class="mb-0">{[loginErr.msg]}</p>
+    </div>
+</div>
