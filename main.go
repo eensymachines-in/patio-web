@@ -53,7 +53,9 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
 
-	api := r.Group("/api").Use(CORS)
+	api := r.Group("/api")
+	api.Use(CORS)
+	
 	api.POST("/login", func(c *gin.Context) {
 		login := Login{}
 		byt, err := io.ReadAll(c.Request.Body)
@@ -76,6 +78,10 @@ func main() {
 			c.JSON(http.StatusUnauthorized, gin.H{})
 		}
 	})
+
+	// ------------ Getting device configurations -------
+	devices := api.Group("/devices")
+	devices.GET("/devices/:uid/config")
 
 	log.Fatal(r.Run(":8080"))
 }

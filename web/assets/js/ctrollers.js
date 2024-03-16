@@ -42,4 +42,35 @@
             }
         }
     })
+    .controller("settingsCtrl", function($scope, $http){
+        $scope.settings = {
+            // pump settings 
+            config : 0,
+            tickat: "",
+            pulsegap: 60, 
+            interval: 100, 
+        }
+        // Getting the current settings to start with 
+        $http({
+            method: 'get',
+            url: '/api/devices/id/config',
+        }).then(function(response){
+            console.log("got current settings on the device ok..")
+            console.log(response)
+        }, function(response){
+            console.error("failed to get settings from the device..")
+            console.log(response.status)
+        })
+        $scope.submit = function(){
+            // sends the settings object to rabbitmq
+            $http({}).then(function(response){
+                console.log("success in posting settings .. ")
+                $location.reload()
+            }, function(response){
+                if (response.status == 500){
+                    console.log("internal error posting settings to the device")
+                } 
+            })
+        }
+    })
 })();

@@ -1,0 +1,61 @@
+version: '3.1'
+
+services:
+  srv_gin:
+    build: 
+      context: .
+      args:
+        - SRC=${SRCDIR}
+        - LOG=${LOGDIR}
+        - RUN=${RUNDIR}
+        - ETC=${ETCDIR}
+        - BIN=${BINDIR}
+        - APPNAME=${APPNAME}
+    ports:
+      - 8081:8080 
+    environment:
+      - FLOG=0
+      - SILENT=0
+      - GINMODE=DEBUG
+    container_name: ctn_web 
+    stdin_open: true
+    networks:
+      - eensyaqp-nw
+    depends_on:
+      srv_mongo:
+        condition: service_healthy
+      srv_rabbit:
+        condition: service_healthy
+    entrypoint: ["${BINDIR}/APPNAME"]
+  srv_mongo:
+    image: mongo:4.2-bionic
+    volumes: 
+      - /data/db:/data/db
+    ports:
+      - 57017:27017
+    networks:
+    - eensyaqp-nw
+    environment:
+      - name=value
+    container_name: ctn_mongo
+    tty: true
+    stdin_open: true
+    healthcheck:
+      test: "exit 0"
+  srv_rabbit:
+    image: rabbitmq:3.13-rc-management
+    ports:
+      - 15672:15672
+      - 5672:5672
+    networks:
+      - eensyaqp-nw
+    environment:
+      - RABBITMQ_DEFAULT_USER=eensyiot-admin
+      - RABBITMQ_DEFAULT_PASS=33n5y4dm1n
+    stdin_open: true 
+    container_name: ctn_rabbit
+    healthcheck:
+      test: "exit 0"
+networks:
+  eensyaqp-nw:
+      driver: bridge
