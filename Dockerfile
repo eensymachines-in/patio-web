@@ -25,6 +25,12 @@ RUN chmod -R +x ${BIN}
 # RUN rm mycron
 # https://stackoverflow.com/questions/30215830/dockerfile-copy-keep-subdirectory-structure
 # since we want the entire directory structure recursively to be copied onto the container
-COPY . .
+COPY go.mod .
+COPY go.sum .
 RUN go mod download 
+
+COPY . .
+# ENTRYPOINT ["/bin/sh", "-c","go run ."]
+# # TODO: when moving to production remove above statement and enable below statement 
+# # TODO: change entrypoint in docker-compose.yml
 RUN go build -o ${BIN}/${APPNAME} .

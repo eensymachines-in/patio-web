@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -11,7 +12,14 @@ import (
 )
 
 const (
-	webpages = "web/*.html"
+	webpages      = "web/*.html"
+	testDeviceUid = "705b200f-059b-4630-bf3d-5d55c3a4a9dc" // this is when we havent got the device registered on the server
+)
+
+var (
+	db_USER   string
+	db_PASSWD string
+	db_SERVER string = "srv_mongo"
 )
 
 func init() { // logging setup
@@ -38,6 +46,35 @@ func init() { // logging setup
 	} else {
 		log.SetLevel(log.DebugLevel) // for production
 	}
+	fromSecretFile := func(path string) (string, error) {
+		f, err := os.Open(path)
+		if err != nil {
+			return "", fmt.Errorf("error opening the secrets file")
+		}
+		byt, err := io.ReadAll(f)
+		if err != nil {
+			return "", fmt.Errorf("error reading the secrets file")
+		}
+		return string(byt), nil
+	}
+	// Getting db credentials
+	data := map[string]string{
+		"userid": "/run/secrets/db_root_username",
+		"passwd": "/run/secrets/db_root_password",
+	}
+	var err error
+	db_USER, err = fromSecretFile(data["userid"])
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("failed to load database credentials from secrets file")
+	} // loaded user for database login
+	db_PASSWD, err = fromSecretFile(data["passwd"])
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("failed to load database credentials from secrets file")
+	} // loaded pw for database login
 }
 
 func main() {
@@ -55,7 +92,7 @@ func main() {
 
 	api := r.Group("/api")
 	api.Use(CORS)
-	
+
 	api.POST("/login", func(c *gin.Context) {
 		login := Login{}
 		byt, err := io.ReadAll(c.Request.Body)
@@ -79,9 +116,10 @@ func main() {
 		}
 	})
 
-	// ------------ Getting device configurations -------
+	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")
-	devices.GET("/devices/:uid/config")
+	devices.GET("/:uid/config", MongoConnect, HndlDeviceConfig)
+	devices.PUT("/:uid/config", MongoConnect, HndlDeviceConfig)
 
 	log.Fatal(r.Run(":8080"))
 }

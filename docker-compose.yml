@@ -17,6 +17,9 @@ services:
       - FLOG=0
       - SILENT=0
       - GINMODE=DEBUG
+    secrets:
+      - db_root_username
+      - db_root_password
     container_name: ctn_web 
     stdin_open: true
     networks:
@@ -33,6 +36,9 @@ services:
     secrets:
       - db_root_username
       - db_root_password
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME_FILE=/run/secrets/db_root_username
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/db_root_password
     volumes: 
       - /data/eensyaquap/mongo:/data/db
     ports:
