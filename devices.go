@@ -20,6 +20,27 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// validateDeviceSched : for all schedule configurations that are incoming it needs a check before its saved on the database
+// schedule configurations on the database are single source of truths and hence low tolerance for any rogue values
+func validateDeviceSched(cfg aquacfg.AppConfig) bool {
+	if cfg.Schedule.Config < aquacfg.ScheduleType(0) || cfg.Schedule.Config > aquacfg.ScheduleType(3) {
+		return false
+	}
+	if cfg.Schedule.Config == aquacfg.PULSE_EVERY { // for other schedule types checking is irrelevant
+		// For PULSE_EVERY_DAYAT - interval is irrelevant
+		// For TICK_EVERY - pulse gap is irrelevant
+		if cfg.Schedule.Interval <= cfg.Schedule.PulseGap {
+			return false // interval cannot be equal or less than pulse gap
+		}
+	}
+	if cfg.Schedule.Config == aquacfg.PULSE_EVERY_DAYAT || cfg.Schedule.Config == aquacfg.TICK_EVERY_DAYAT {
+		if cfg.Schedule.TickAt == "" { //when clock driven the clock cannot be empty
+			return false
+		}
+	}
+	return true
+}
+
 func HndlDeviceConfig(c *gin.Context) {
 	val, exists := c.Get("mongo-client")
 	if !exists {
@@ -74,6 +95,11 @@ func HndlDeviceConfig(c *gin.Context) {
 			log.WithFields(log.Fields{
 				"err": err,
 			}).Error("failed to read new config data : HndlDeviceConfig")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{})
+			return
+		}
+		if !validateDeviceSched(ac) {
+			log.Error("Invalid schedule for the device : HndlDeviceConfig")
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{})
 			return
 		}
