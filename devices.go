@@ -61,7 +61,7 @@ func HndlDeviceConfig(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{})
 			return
 		}
-		res, err := configs.UpdateOne(ctx, bson.M{"uid": testDeviceUid}, bson.M{"$set": bson.M{"config": ac.Schedule.Config, "tickat": ac.Schedule.TickAt, "pulsegap": ac.Schedule.PulseGap, "interval": ac.Schedule.Interval}})
+		res, err := configs.UpdateOne(ctx, bson.M{"uid": testDeviceUid}, bson.M{"$set": ac.Schedule})
 		if err != nil {
 			if errors.Is(err, mongo.ErrNoDocuments) {
 				log.WithFields(log.Fields{
