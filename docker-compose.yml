@@ -26,17 +26,19 @@ services:
         condition: service_healthy
       srv_rabbit:
         condition: service_healthy
-    entrypoint: ["${BINDIR}/APPNAME"]
+    entrypoint: ["${BINDIR}/${APPNAME}"]
   srv_mongo:
     image: mongo:4.2-bionic
+    command: [--auth]
+    secrets:
+      - db_root_username
+      - db_root_password
     volumes: 
-      - /data/db:/data/db
+      - /data/eensyaquap/mongo:/data/db
     ports:
       - 57017:27017
     networks:
     - eensyaqp-nw
-    environment:
-      - name=value
     container_name: ctn_mongo
     tty: true
     stdin_open: true
@@ -59,3 +61,8 @@ services:
 networks:
   eensyaqp-nw:
       driver: bridge
+secrets:
+  db_root_username:
+    file: ./db_root_username.secret
+  db_root_password:
+    file: ./db_root_password.secret

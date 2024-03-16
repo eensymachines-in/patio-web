@@ -1,5 +1,5 @@
 # FROM kneerunjun/gogingonic:latest
-FROM golang:1.19-alpine3.16
+FROM golang:1.21.8-alpine3.19
 # from the vanilla image of go gin with mgo driver
 # mapping for log files
 ARG SRC
@@ -9,7 +9,7 @@ ARG ETC
 ARG BIN
 ARG APPNAME
 RUN apk add git
-RUN mkdir -p ${SRC} && mkdir -p ${LOG} && mkdir -p ${RUN} && mkdir -p ${ETC}
+RUN mkdir -p ${SRC} && mkdir -p ${LOG} && mkdir -p ${RUN} && mkdir -p ${ETC} && mkdir -p ${BIN}
 WORKDIR ${SRC}
 # # getting  all the shells to an executable location
 # COPY ./shells/ ${BIN} 
