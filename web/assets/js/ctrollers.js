@@ -42,7 +42,7 @@
             }
         }
     })
-        .controller("settingsCtrl", function ($scope, $http) {
+        .controller("settingsCtrl", function ($scope, $http, $timeout) {
             $scope.hrOptions = [
                 "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12",
                 "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"
@@ -120,9 +120,8 @@
             })
             $scope.$watch("viewModel.clock", function (after, before) {
                 if (after !== undefined && after !== null) {
-                    console.log(after)
                     $scope.settings.tickat = after.hr + ":" + after.min;
-
+                    console.log("view model clock now applied to settings..");
                 }
             }, true) // its a deep watch since we want to track the properties
             $scope.submit = function () {
@@ -131,24 +130,31 @@
             // Getting the current settings to start with 
             $http({
                 method: 'get',
-                url: '/api/devices/id/config',
+                url: '/api/devices/5646564dfgdf/config',
             }).then(function (response) {
-                console.log("got current settings on the device ok..")
-                console.log(response)
+                console.log("received current settings from the server", response.data);
+                // $scope.setting = response.data;
+                // Below assignments shall trigger all the watches ..
+                // BUG: this isnt triggering the watches early, the clock is the only thing that isnt syncing 
+                $scope.viewModel.clock= {hr: response.data.tickat.split(":")[0], min :response.data.tickat.split(":")[1]};
+                $scope.configOptions.forEach(e => {
+                    if (e.opt == response.data.config) {
+                        console.log("found matching config option..")
+                        $scope.viewModel.CfgOpt = e;
+                        return
+                    }
+                })
+                $scope.viewModel.pulsegap = response.data.pulsegap;
+                $scope.viewModel.interval  = response.data.interval;
+
+                $timeout(function(){
+                    console.log("viewmodel to settings ...");
+                    console.log( $scope.settings);
+                }, 500)
             }, function (response) {
                 console.error("failed to get settings from the device..")
                 console.log(response.status)
             })
-            // $scope.submit = function(){
-            //     // sends the settings object to rabbitmq
-            //     $http({}).then(function(response){
-            //         console.log("success in posting settings .. ")
-            //         $location.reload()
-            //     }, function(response){
-            //         if (response.status == 500){
-            //             console.log("internal error posting settings to the device")
-            //         } 
-            //     })
-            // }
+            
         })
 })();

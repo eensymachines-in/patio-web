@@ -93,7 +93,7 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
 	api := r.Group("/api")
-	api.Use(CORS)
+	api.Use(CORS).Use(MongoConnect)
 
 	api.POST("/login", func(c *gin.Context) {
 		login := Login{}
@@ -120,8 +120,8 @@ func main() {
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")
-	devices.GET("/:uid/config", MongoConnect, HndlDeviceConfig)
-	devices.PUT("/:uid/config", MongoConnect, HndlDeviceConfig)
+	devices.GET("/:uid/config", HndlDeviceConfig) // getting existing device configuration on server
+	devices.PUT("/:uid/config", HndlDeviceConfig) // updating device configuration on server
 
 	log.Fatal(r.Run(":8080"))
 }
