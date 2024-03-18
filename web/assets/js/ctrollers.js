@@ -111,17 +111,11 @@
             $scope.$watch("viewModel.CfgOpt", function (after, before) {
                 if (after !== undefined && after !== null) {
                     $scope.settings.config = after.opt;
-                    if (after.opt == 1 || after.opt == 3) {
-                        $scope.viewModel.clock = { hr: $scope.hrOptions[0], min: $scope.mnOptions[0] }
-                    } else {
-                        $scope.viewModel.clock = null;
-                    }
                 }
             })
             $scope.$watch("viewModel.clock", function (after, before) {
                 if (after !== undefined && after !== null) {
                     $scope.settings.tickat = after.hr + ":" + after.min;
-                    console.log("view model clock now applied to settings..");
                 }
             }, true) // its a deep watch since we want to track the properties
             $scope.submit = function () {
@@ -133,10 +127,6 @@
                 url: '/api/devices/5646564dfgdf/config',
             }).then(function (response) {
                 console.log("received current settings from the server", response.data);
-                // $scope.setting = response.data;
-                // Below assignments shall trigger all the watches ..
-                // BUG: this isnt triggering the watches early, the clock is the only thing that isnt syncing 
-                $scope.viewModel.clock= {hr: response.data.tickat.split(":")[0], min :response.data.tickat.split(":")[1]};
                 $scope.configOptions.forEach(e => {
                     if (e.opt == response.data.config) {
                         console.log("found matching config option..")
@@ -144,6 +134,7 @@
                         return
                     }
                 })
+                $scope.viewModel.clock= {hr: response.data.tickat.split(":")[0], min :response.data.tickat.split(":")[1]};
                 $scope.viewModel.pulsegap = response.data.pulsegap;
                 $scope.viewModel.interval  = response.data.interval;
 
