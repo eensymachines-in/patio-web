@@ -1,3 +1,63 @@
-<div class="container" ng-controller="settingsCtrl">
-    <p>Welcome to the settings page, here you would be able to make changes to device on the ground </p>
+<div class="container mt-4" ng-controller="settingsCtrl">
+    <form>
+        <fieldset>
+            <legend class="text-center">
+                <h3><i class="fas fa-fan fa-spin"></i>&nbsp;Pump settings</h3>
+                <!-- <h3><i class="bi bi-fan fa-spin"></i>&nbsp;Pump settings</h3> -->
+            </legend>
+            <p class="text-muted text-center">Select how you want to re-program the pump. Pump cycle can be
+                re-programmed for the duration of sleep and work times in an infinite cycle.</p>
+            <hr>
+            <div class="form-group">
+                <label for="selcfgoption">Select mode</label>
+                <select class="form-control text-primary" id="selcfgoption" ng-model="viewModel.CfgOpt"
+                    ng-options="o as o.txt for o in configOptions track by o.opt" name="selCfgOption">
+                    <!-- https://stackoverflow.com/questions/43432208/select-first-option-in-select-angularjs -->
+                </select>
+                <!-- <small id="selcfgoptionHelp" class="mx-1 form-text text-muted">{[viewModel.CfgOpt.note]}.</small> -->
+                <div class="container mt-2">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text text-muted">{[viewModel.CfgOpt.note]} <br>{[viewModel.CfgOpt.exmp]}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" ng-show="viewModel.clock">
+                <!-- for the tickat clock setting -->
+                <div class="row">
+                    <div class="col-6">
+                        <label for="pickHr"><i class="far fa-clock"></i>&nbsp;&nbsp;Hours</label>
+                        <select name="pickHr" id="pickHr" ng-model="viewModel.clock.hr"
+                            ng-options="h as h for h in hrOptions track by h" class="form-control text-primary"></select>
+                    </div>
+                    <div class="col-6">
+                        <label for="pickMin"><i class="far fa-clock"></i>&nbsp;&nbsp;Minutes</label>
+                        <select name="pickMin" id="pickMin" ng-model="viewModel.clock.min"
+                            ng-options="m as m for m in mnOptions track by m" class="form-control text-primary"></select>
+                    </div>
+                </div>
+
+            </div>
+            <div class="form-group" ng-show="viewModel.CfgOpt.opt ==0 || viewModel.CfgOpt.opt ==2">
+                <label for="exampleInputEmail1"><i class="fas fa-pause"></i>&nbsp;&nbsp;Interval (seconds)</label>
+                <input ng-model="viewModel.interval" type="number" class="form-control text-primary"
+                    ng-class="{true:'is-invalid'}[viewModel.intervalInvalid==true]" id="interval"
+                    aria-describedby="intervalHelp">
+                <small id="intervalHelp" class="form-text text-muted">Trigger interval in seconds, Value between 60 to
+                    86400</small>
+            </div>
+            <div class="form-group" ng-show="viewModel.CfgOpt.opt ==2 || viewModel.CfgOpt.opt ==3">
+                <label for="exampleInputEmail1"><i class="fas fa-wave-square"></i>&nbsp;&nbsp;Pulse gap
+                    (seconds)</label>
+                <input ng-model="viewModel.pulsegap" type="number" class="form-control text-primary"
+                    ng-class="{true:'is-invalid'}[viewModel.pulsegapInvalid==true]" id="interval"
+                    aria-describedby="intervalHelp" placeholder="">
+                <small id="intervalHelp" class="form-text text-muted">Gap between the 2 triggers, has to be less than
+                    interval seconds</small>
+            </div>
+            <button ng-click="submit()" type="submit" class="btn btn-primary btn-block"><i
+                    class="far fa-paper-plane"></i>&nbsp;Submit</button>
+        </fieldset>
+    </form>
 </div>

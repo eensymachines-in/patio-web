@@ -10,6 +10,7 @@ place 		: pune
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -69,13 +70,17 @@ func HndlDeviceConfig(c *gin.Context) {
 					"err": res.Err(),
 					"uid": uid,
 				}).Error("error getting devices: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{})
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+					"msg": fmt.Sprintf("Missing device with id: %s", uid),
+				})
 			} else {
 				log.WithFields(log.Fields{
 					"err": res.Err(),
 					"uid": uid,
 				}).Error("error getting devices: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{})
+				c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{
+					"msg": fmt.Sprintf("Error getting device details: %s", uid),
+				})
 			}
 			return
 		}
@@ -84,7 +89,9 @@ func HndlDeviceConfig(c *gin.Context) {
 			log.WithFields(log.Fields{
 				"err": err,
 			}).Error("while unmarshaling data from database: HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"msg": fmt.Sprintf("Internal error getting device details: %s", uid),
+			})
 			return
 		}
 		c.JSON(http.StatusOK, &ac.Schedule)
@@ -95,27 +102,35 @@ func HndlDeviceConfig(c *gin.Context) {
 			log.WithFields(log.Fields{
 				"err": err,
 			}).Error("failed to read new config data : HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"msg": "Error reading request payload:",
+			})
 			return
 		}
 		if !validateDeviceSched(ac) {
 			log.Error("Invalid schedule for the device : HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"msg": "Invalid device configuration, check and send again",
+			})
 			return
 		}
-		res, err := configs.UpdateOne(ctx, bson.M{"uid": testDeviceUid}, bson.M{"$set": ac.Schedule})
+		res, err := configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": ac.Schedule})
 		if err != nil {
 			if errors.Is(err, mongo.ErrNoDocuments) {
 				log.WithFields(log.Fields{
 					"matched": res.MatchedCount,  // shoudl be 0
 					"updated": res.UpsertedCount, // should be 0
 				}).Error("no matching devices found to update configuration: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{})
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+					"msg": fmt.Sprintf("Error updating device configuration for %s, no device found", uid),
+				})
 			} else {
 				log.WithFields(log.Fields{
 					"err": err,
 				}).Error("failed to update device configuration: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+					"msg": "Internal error updating device configuration",
+				})
 				return
 			}
 		}

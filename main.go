@@ -89,7 +89,9 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
-
+	r.GET("/settings", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{})
+	})
 	api := r.Group("/api")
 	api.Use(CORS)
 
