@@ -42,7 +42,7 @@
             }
         }
     })
-        .controller("settingsCtrl", function ($scope, $http, $timeout) {
+        .controller("settingsCtrl", function ($scope, $http, $timeout, $route) {
             $scope.hrOptions = [
                 "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12",
                 "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"
@@ -120,6 +120,19 @@
             }, true) // its a deep watch since we want to track the properties
             $scope.submit = function () {
                 console.log($scope.settings);
+                $http({
+                    method: 'put',
+                    url: '/api/devices/5646564dfgdf/config',
+                    data: $scope.settings,
+                    headers: {
+                        'Content-Type': "application/json"
+                    },
+                }).then(function(response){
+                    console.log("done! settings have been updated");
+                    $route.reload(); // reload the same settings page 
+                }, function(response){
+                    console.log("failed ! settings could not be updated");
+                })
             }
             // Getting the current settings to start with 
             $http({
