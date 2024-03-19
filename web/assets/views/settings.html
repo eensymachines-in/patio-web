@@ -56,8 +56,10 @@
                 <small id="intervalHelp" class="form-text text-muted">Gap between the 2 triggers, has to be less than
                     interval seconds</small>
             </div>
-            <button ng-click="submit()" type="submit" class="btn btn-primary btn-block"><i
-                    class="far fa-paper-plane"></i>&nbsp;Submit</button>
+            <button ng-click="submit()" type="submit" 
+            class="btn btn-primary btn-block"
+            ng-class="{true:'disabled'}[viewModel.pulsegapInvalid == true || viewModel.intervalInvalid ==true]"
+            ><i class="far fa-paper-plane"></i>&nbsp;Submit</button>
         </fieldset>
     </form>
 </div>
