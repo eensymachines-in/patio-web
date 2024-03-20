@@ -74,7 +74,7 @@ func (esr *eSendRabbit) ClientErrData() string {
 	return "We couldnt communicate the changes to the device. Server would not attempt to send this again"
 }
 func (egc *eGtwyConn) ClientErrData() string {
-	return "One or more gateways for the server has gone down, report this to a sysadmin to get it fixed"
+	return "One or more gateways for the server is down/forbidden/closed, report this to a sysadmin to get it fixed"
 }
 
 func (ecpm *eCtxParamMissing) Error() string {

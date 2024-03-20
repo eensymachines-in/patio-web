@@ -56,13 +56,6 @@ func publishToRabbit(c *gin.Context, exchng string, byt []byte) error {
 	}
 	ch := val.(*amqp.Channel)
 
-	val, exists = c.Get("rabbit-conn")
-	if !exists {
-		return fmt.Errorf("publishToRabbit: missing context param - rabbit-conn")
-	}
-	conn := val.(*amqp.Connection)
-	defer conn.Close()
-
 	val, exists = c.Get("rabbit-queue")
 	if !exists {
 		return fmt.Errorf("publishToRabbit: missing context param - rabbit-queue")
@@ -165,6 +158,17 @@ func HndlDeviceConfig(c *gin.Context) {
 		}
 		// TODO: here we need to post an update message to message queue so as to update the device accordingly
 		byt, _ := json.Marshal(ac.Schedule)
+		// Getting the rabbitmq connection so as to set up flushing of it before handler exits
+		val, exists = c.Get("rabbit-conn")
+		if !exists {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrContxParamMissing(fmt.Errorf("missing mongo-client")), log.WithFields(log.Fields{
+				"stack": "HndlDeviceConfig/PUT",
+			}))
+			return
+		}
+		conn := val.(*amqp.Connection)
+		defer conn.Close()
+
 		if err := publishToRabbit(c, "", byt); err != nil {
 			// TODO: we are just hoping there isnt any error here
 			configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": backup.Schedule}) // undoing the database changes
