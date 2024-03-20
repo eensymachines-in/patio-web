@@ -97,7 +97,7 @@ func HndlDeviceConfig(c *gin.Context) {
 
 	// Getting the device uid
 	uid := c.Param("uid")
-	uid = testDeviceUid // TODO: remove this line to bypass hardcoding
+	// uid = testDeviceUid // TODO: remove this line to bypass hardcoding
 
 	if c.Request.Method == "GET" { //getting the device configuration from the server
 		// TODO:  replace testDeviceUID from the url params as the actula device uid

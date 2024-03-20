@@ -62,7 +62,7 @@ func (eu *eUnmarshal) ClientErrData() string {
 	return "Error reading in the data sent, check your inputs and try again. If the problem persists then contact sys admin"
 }
 func (edbq *eDBQuery) ClientErrData() string {
-	return "failed to get data from store, this is unusual, if the problem persists even after a while contact the sys admin"
+	return "Resource not found, this happens when one or more params indicate a resource that isnt registered. Check and send again"
 }
 func (ev *eValidation) ClientErrData() string {
 	return "One or more inputs in the request were invalidated by the server, check your inputs and send again"
