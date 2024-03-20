@@ -21,6 +21,7 @@ services:
       - GINMODE=DEBUG
       - AMQP_SERVER=srv_rabbit
       - AMQP_LOGIN=eensyiot-admin:33n5y4dm1n
+      - AMQP_QNAME=config-alerts
       # - AMQP_LOGIN=eensyiot-admin:33n5y4dm1u
     secrets:
       - db_root_username

@@ -120,8 +120,8 @@ func main() {
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")
-	devices.GET("/:uid/config", HndlDeviceConfig)                                        // getting existing device configuration on server
-	devices.PUT("/:uid/config", RabbitConnectWithChn("config-alerts"), HndlDeviceConfig) // updating device configuration on server
+	devices.GET("/:uid/config", HndlDeviceConfig)                                                // getting existing device configuration on server
+	devices.PUT("/:uid/config", RabbitConnectWithChn(os.Getenv("AMQP_QNAME")), HndlDeviceConfig) // updating device configuration on server
 
 	log.Fatal(r.Run(":8080"))
 }
