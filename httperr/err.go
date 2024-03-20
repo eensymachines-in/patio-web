@@ -55,6 +55,28 @@ type eGtwyConn struct {
 	Internal error
 }
 
+func (ecpm *eCtxParamMissing) ClientErrData() string {
+	return "One or more components of the server isnt working as it should be. Kindly contact the sys admin"
+}
+func (eu *eUnmarshal) ClientErrData() string {
+	return "Error reading in the data sent, check your inputs and try again. If the problem persists then contact sys admin"
+}
+func (edbq *eDBQuery) ClientErrData() string {
+	return "failed to get data from store, this is unusual, if the problem persists even after a while contact the sys admin"
+}
+func (ev *eValidation) ClientErrData() string {
+	return "One or more inputs in the request were invalidated by the server, check your inputs and send again"
+}
+func (eb *eBinding) ClientErrData() string {
+	return "Request payload wasnt as expected, check your inputs and send again"
+}
+func (esr *eSendRabbit) ClientErrData() string {
+	return "We couldnt communicate the changes to the device. Server would not attempt to send this again"
+}
+func (egc *eGtwyConn) ClientErrData() string {
+	return "One or more gateways for the server has gone down, report this to a sysadmin to get it fixed"
+}
+
 func (ecpm *eCtxParamMissing) Error() string {
 	return ecpm.Internal.Error()
 }

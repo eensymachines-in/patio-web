@@ -6,14 +6,17 @@ import (
 )
 
 type HttpErr interface {
-	SetInternal(ie error) HttpErr
-	Log(le *log.Entry) HttpErr
-	HttpStatusCode() int
+	SetInternal(ie error) HttpErr // sets the internal error object, used in logging has internal server information, never send on ClientErrData
+	Log(le *log.Entry) HttpErr    // logs the error all in 1 place
+	HttpStatusCode() int          // status code relevant to the error
+	ClientErrData() string        // error message dispatched to the client (web) typically used with AbortStatusWithJSON
 }
 
 func HttpErrOrOkDispatch(c *gin.Context, err HttpErr, le *log.Entry) {
 	if err == nil {
 		return
 	}
-	c.AbortWithStatus(err.Log(le).HttpStatusCode())
+	c.AbortWithStatusJSON(err.Log(le).HttpStatusCode(), gin.H{
+		"err_data": err.ClientErrData(),
+	})
 }
