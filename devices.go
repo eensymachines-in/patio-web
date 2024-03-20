@@ -52,32 +52,20 @@ func validateDeviceSched(cfg aquacfg.AppConfig) bool {
 func publishToRabbit(c *gin.Context, exchng string, byt []byte) error {
 	val, exists := c.Get("rabbit-channel")
 	if !exists {
-		log.Error("Missing Rabbitmq channel, check middleware")
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"data": "we are facing connectivity problems for now, try again later",
-		})
-		return fmt.Errorf("failed publishToRabbit")
+		return fmt.Errorf("publishToRabbit: missing context param - rabbit-channel")
 	}
 	ch := val.(*amqp.Channel)
 
 	val, exists = c.Get("rabbit-conn")
 	if !exists {
-		log.Error("Missing Rabbitmq connection, check middleware")
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"data": "we are facing connectivity problems for now, try again later",
-		})
-		return fmt.Errorf("failed publishToRabbit")
+		return fmt.Errorf("publishToRabbit: missing context param - rabbit-conn")
 	}
 	conn := val.(*amqp.Connection)
 	defer conn.Close()
 
 	val, exists = c.Get("rabbit-queue")
 	if !exists {
-		log.Error("Missing Rabbitmq queue, check middleware")
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"data": "we are facing connectivity problems for now, try again later",
-		})
-		return fmt.Errorf("failed publishToRabbit")
+		return fmt.Errorf("publishToRabbit: missing context param - rabbit-queue")
 	}
 	q := val.(amqp.Queue) // NOTE: this isnt *amqp.Queue
 
@@ -94,11 +82,7 @@ func publishToRabbit(c *gin.Context, exchng string, byt []byte) error {
 		},
 	)
 	if err != nil {
-		log.Error("Missing Rabbitmq queue, check middleware")
-		c.JSON(http.StatusBadGateway, gin.H{
-			"data": "we are facing connectivity problems for now, try again later",
-		})
-		return fmt.Errorf("failed publishToRabbit")
+		return fmt.Errorf("failed publishToRabbit: %s", err)
 	}
 	return nil
 }

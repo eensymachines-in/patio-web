@@ -7,8 +7,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -20,23 +22,21 @@ func RabbitConnectWithChn(name string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		conn, err := amqp.Dial(fmt.Sprintf("amqp://%s@%s/", os.Getenv("AMQP_LOGIN"), os.Getenv("AMQP_SERVER")))
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"err": err,
-			}).Error("failed to connect to rabbit server")
-			c.JSON(http.StatusBadGateway, gin.H{
-				"data": "we are facing connectivity problems for now, try again later",
-			})
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
+				"stack":  "RabbitConnectWithChn",
+				"login":  os.Getenv("AMQP_LOGIN"),
+				"server": os.Getenv("AMQP_SERVER"),
+			}))
 			return
 		}
 		// defer conn.Close()
 		ch, err := conn.Channel()
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"err": err,
-			}).Error("failed to initiate queue on rabbit server")
-			c.JSON(http.StatusBadGateway, gin.H{
-				"data": "we are facing connectivity problems for now, try again later",
-			})
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
+				"stack":  "RabbitConnectWithChn",
+				"login":  os.Getenv("AMQP_LOGIN"),
+				"server": os.Getenv("AMQP_SERVER"),
+			}))
 			return
 		}
 		q, err := ch.QueueDeclare(
@@ -48,12 +48,11 @@ func RabbitConnectWithChn(name string) gin.HandlerFunc {
 			nil,   // arguments
 		)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"err": err,
-			}).Error("failed to create queue on rabbitmq:")
-			c.JSON(http.StatusBadGateway, gin.H{
-				"data": "we are facing connectivity problems for now, try again later",
-			})
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
+				"stack":  "RabbitConnectWithChn",
+				"login":  os.Getenv("AMQP_LOGIN"),
+				"server": os.Getenv("AMQP_SERVER"),
+			}))
 			return
 		}
 		c.Set("rabbit-channel", ch) // posting messages for downstream

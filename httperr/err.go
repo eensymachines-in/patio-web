@@ -28,6 +28,9 @@ var (
 	ErrSendRabbit = func(e error) HttpErr {
 		return (&eSendRabbit{}).SetInternal(e)
 	}
+	ErrGatewayConnect = func(e error) HttpErr {
+		return (&eGtwyConn{}).SetInternal(e)
+	}
 )
 
 type eCtxParamMissing struct {
@@ -48,6 +51,9 @@ type eBinding struct {
 type eSendRabbit struct {
 	Internal error
 }
+type eGtwyConn struct {
+	Internal error
+}
 
 func (ecpm *eCtxParamMissing) Error() string {
 	return ecpm.Internal.Error()
@@ -66,6 +72,18 @@ func (eb *eBinding) Error() string {
 }
 func (esr *eSendRabbit) Error() string {
 	return esr.Internal.Error()
+}
+
+func (egc *eGtwyConn) Error() string {
+	return egc.Internal.Error()
+}
+
+func (egc *eGtwyConn) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	egc.Internal = ie
+	return egc
 }
 
 func (esr *eSendRabbit) SetInternal(ie error) HttpErr {
@@ -112,6 +130,12 @@ func (eb *eBinding) SetInternal(ie error) HttpErr {
 	return eb
 }
 
+func (egc *eGtwyConn) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": egc.Internal,
+	}).Error("failed sending message to rabbitmq")
+	return egc
+}
 func (esr *eSendRabbit) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": esr.Internal,
@@ -153,6 +177,10 @@ func (eb *eBinding) Log(le *log.Entry) HttpErr {
 		"internal_err": eb.Internal,
 	}).Error("one or more field validations failed")
 	return eb
+}
+
+func (egc *eGtwyConn) HttpStatusCode() int {
+	return http.StatusBadGateway
 }
 
 func (esr *eSendRabbit) HttpStatusCode() int {
