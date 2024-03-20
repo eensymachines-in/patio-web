@@ -128,9 +128,12 @@
                         'Content-Type': "application/json"
                     },
                 }).then(function(response){
-                    console.log("done! settings have been updated");
+                    console.log("done! settings have been updated", response);
                     $route.reload(); // reload the same settings page 
                 }, function(response){
+                    if (response.status == 400){
+                        console.error("Bad request updating the device configuration, ")
+                    }
                     console.log("failed ! settings could not be updated");
                 })
             }

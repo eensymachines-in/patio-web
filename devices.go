@@ -9,14 +9,16 @@ place 		: pune
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/eensymachines-in/patio/aquacfg"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -42,13 +44,72 @@ func validateDeviceSched(cfg aquacfg.AppConfig) bool {
 	return true
 }
 
-func HndlDeviceConfig(c *gin.Context) {
-	val, exists := c.Get("mongo-client")
+// publishToRabbit : knows how to get rabbit pieces from middleware and publish the desired message to intended exchange
+// c		: gin context which is laden by middleware pieces
+// exchng 	: name of the exchange to publish to
+// byt		: byte message to post
+// returns error to indicate that handler can exit, loads the context with appropriate error. From the client check for error and if error just return
+func publishToRabbit(c *gin.Context, exchng string, byt []byte) error {
+	val, exists := c.Get("rabbit-channel")
 	if !exists {
-		log.Error("Missing database connection from previous handler.. HAve you called MongoConnect before this handler?")
+		log.Error("Missing Rabbitmq channel, check middleware")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"data": "we are facing connectivity problems for now, try again later",
 		})
+		return fmt.Errorf("failed publishToRabbit")
+	}
+	ch := val.(*amqp.Channel)
+
+	val, exists = c.Get("rabbit-conn")
+	if !exists {
+		log.Error("Missing Rabbitmq connection, check middleware")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"data": "we are facing connectivity problems for now, try again later",
+		})
+		return fmt.Errorf("failed publishToRabbit")
+	}
+	conn := val.(*amqp.Connection)
+	defer conn.Close()
+
+	val, exists = c.Get("rabbit-queue")
+	if !exists {
+		log.Error("Missing Rabbitmq queue, check middleware")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"data": "we are facing connectivity problems for now, try again later",
+		})
+		return fmt.Errorf("failed publishToRabbit")
+	}
+	q := val.(amqp.Queue) // NOTE: this isnt *amqp.Queue
+
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
+	err := ch.Publish(
+		exchng, // exchange
+		q.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        byt,
+		},
+	)
+	if err != nil {
+		log.Error("Missing Rabbitmq queue, check middleware")
+		c.JSON(http.StatusBadGateway, gin.H{
+			"data": "we are facing connectivity problems for now, try again later",
+		})
+		return fmt.Errorf("failed publishToRabbit")
+	}
+	return nil
+}
+
+func HndlDeviceConfig(c *gin.Context) {
+	val, exists := c.Get("mongo-client")
+	if !exists {
+		httperr.HttpErrOrOkDispatch(c, httperr.ErrContxParamMissing(fmt.Errorf("missing mongo-client")), log.WithFields(log.Fields{
+			"stack": "HndlDeviceConfig",
+		}))
+		return
 	}
 	/* Database connections*/
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -65,76 +126,70 @@ func HndlDeviceConfig(c *gin.Context) {
 		// TODO:  replace testDeviceUID from the url params as the actula device uid
 		res := configs.FindOne(ctx, bson.M{"uid": uid}) // getting device by its uniq id, generally the mac id
 		if res.Err() != nil {
-			if errors.Is(res.Err(), mongo.ErrNoDocuments) {
-				log.WithFields(log.Fields{
-					"err": res.Err(),
-					"uid": uid,
-				}).Error("error getting devices: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-					"msg": fmt.Sprintf("Missing device with id: %s", uid),
-				})
-			} else {
-				log.WithFields(log.Fields{
-					"err": res.Err(),
-					"uid": uid,
-				}).Error("error getting devices: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{
-					"msg": fmt.Sprintf("Error getting device details: %s", uid),
-				})
-			}
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(res.Err()), log.WithFields(log.Fields{
+				"stack": "HndlDeviceConfig/GET",
+				"uid":   uid,
+			}))
 			return
 		}
 		ac := aquacfg.AppConfig{}
-		if err := res.Decode(&ac.Schedule); err != nil {
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Error("while unmarshaling data from database: HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"msg": fmt.Sprintf("Internal error getting device details: %s", uid),
-			})
+		err := res.Decode(&ac.Schedule)
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrUnMarshal(err), log.WithFields(log.Fields{
+				"stack":    "HndlDeviceConfig/GET",
+				"schedule": fmt.Sprintf("%v", ac.Schedule),
+			}))
 			return
 		}
 		c.JSON(http.StatusOK, &ac.Schedule)
 		return
 	} else if c.Request.Method == "PUT" { // webapp woudl want to change the device configuration
 		ac := aquacfg.AppConfig{}
-		if err := c.ShouldBind(&ac.Schedule); err != nil {
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Error("failed to read new config data : HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"msg": "Error reading request payload:",
-			})
+		err := c.ShouldBind(&ac.Schedule)
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
+				"stack":    "HndlDeviceConfig/PUT",
+				"schedule": fmt.Sprintf("%v", ac.Schedule),
+			}))
 			return
 		}
 		if !validateDeviceSched(ac) {
-			log.Error("Invalid schedule for the device : HndlDeviceConfig")
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"msg": "Invalid device configuration, check and send again",
-			})
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrValidation(fmt.Errorf("failed validation of device schedule")), log.WithFields(log.Fields{
+				"stack":    "HndlDeviceConfig/PUT",
+				"schedule": fmt.Sprintf("%v", ac.Schedule),
+			}))
 			return
 		}
-		res, err := configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": ac.Schedule})
+		// Incase the database update succeeds but messageq exchange isnt reachable that would put server out of sync from the device below
+		// And since the messageq hasnt received the message there is no way for the device to pull up the message
+		backup := aquacfg.AppConfig{}
+		err = configs.FindOne(ctx, bson.M{"uid": uid}).Decode(&backup.Schedule) // getting the backup of configuration incase mq does fails.
 		if err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				log.WithFields(log.Fields{
-					"matched": res.MatchedCount,  // shoudl be 0
-					"updated": res.UpsertedCount, // should be 0
-				}).Error("no matching devices found to update configuration: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-					"msg": fmt.Sprintf("Error updating device configuration for %s, no device found", uid),
-				})
-			} else {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Error("failed to update device configuration: HndlDeviceConfig")
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-					"msg": "Internal error updating device configuration",
-				})
-				return
-			}
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(err), log.WithFields(log.Fields{
+				"stack": "HndlDeviceConfig/PUT",
+				"uid":   uid,
+			}))
+			return
+		}
+
+		_, err = configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": ac.Schedule})
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(err), log.WithFields(log.Fields{
+				"stack": "HndlDeviceConfig/PUT",
+			}))
+			return
 		}
 		// TODO: here we need to post an update message to message queue so as to update the device accordingly
+		byt, _ := json.Marshal(ac.Schedule)
+		if err := publishToRabbit(c, "", byt); err != nil {
+			// TODO: we are just hoping there isnt any error here
+			configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": backup.Schedule}) // undoing the database changes
+			// rever the database changes, and return with whatever code was set by publishToRabbit
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrSendRabbit(err), log.WithFields(log.Fields{
+				"stack": "HndlDeviceConfig/PUT",
+			}))
+			return
+		}
 		// NOTE: the source of truth will always be this go server - the client updates the configuration and push notifications are for the device which follows this
 		c.JSON(http.StatusOK, gin.H{})
 		return

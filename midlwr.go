@@ -4,14 +4,63 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+// RabbitConnectWithChn : name of the channel this publishes to, via default exchange
+func RabbitConnectWithChn(name string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		conn, err := amqp.Dial(fmt.Sprintf("amqp://%s@%s/", os.Getenv("AMQP_LOGIN"), os.Getenv("AMQP_SERVER")))
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"err": err,
+			}).Error("failed to connect to rabbit server")
+			c.JSON(http.StatusBadGateway, gin.H{
+				"data": "we are facing connectivity problems for now, try again later",
+			})
+			return
+		}
+		// defer conn.Close()
+		ch, err := conn.Channel()
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"err": err,
+			}).Error("failed to initiate queue on rabbit server")
+			c.JSON(http.StatusBadGateway, gin.H{
+				"data": "we are facing connectivity problems for now, try again later",
+			})
+			return
+		}
+		q, err := ch.QueueDeclare(
+			name,  // name
+			false, // durable
+			false, // delete when unused
+			false, // exclusive
+			false, // no-wait
+			nil,   // arguments
+		)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"err": err,
+			}).Error("failed to create queue on rabbitmq:")
+			c.JSON(http.StatusBadGateway, gin.H{
+				"data": "we are facing connectivity problems for now, try again later",
+			})
+			return
+		}
+		c.Set("rabbit-channel", ch) // posting messages for downstream
+		c.Set("rabbit-queue", q)    // posting messages for downstream
+		c.Set("rabbit-conn", conn)  //since we need to close from downstream
+	}
+}
 
 // MongoConnect : will connect to a mongo database and insert the connection to downstream handlers
 func MongoConnect(c *gin.Context) {
