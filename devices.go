@@ -156,7 +156,6 @@ func HndlDeviceConfig(c *gin.Context) {
 			}))
 			return
 		}
-		// TODO: here we need to post an update message to message queue so as to update the device accordingly
 		byt, _ := json.Marshal(ac.Schedule)
 		// Getting the rabbitmq connection so as to set up flushing of it before handler exits
 		val, exists = c.Get("rabbit-conn")
@@ -170,15 +169,12 @@ func HndlDeviceConfig(c *gin.Context) {
 		defer conn.Close()
 
 		if err := publishToRabbit(c, "", byt); err != nil {
-			// TODO: we are just hoping there isnt any error here
 			configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": backup.Schedule}) // undoing the database changes
-			// rever the database changes, and return with whatever code was set by publishToRabbit
 			httperr.HttpErrOrOkDispatch(c, httperr.ErrSendRabbit(err), log.WithFields(log.Fields{
 				"stack": "HndlDeviceConfig/PUT",
 			}))
 			return
 		}
-		// NOTE: the source of truth will always be this go server - the client updates the configuration and push notifications are for the device which follows this
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
