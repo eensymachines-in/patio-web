@@ -111,6 +111,7 @@
             $scope.$watch("viewModel.CfgOpt", function (after, before) {
                 if (after !== undefined && after !== null) {
                     $scope.settings.config = after.opt;
+
                 }
             })
             $scope.$watch("viewModel.clock", function (after, before) {
@@ -122,7 +123,7 @@
                 console.log($scope.settings);
                 $http({
                     method: 'put',
-                    url: '/api/devices/5646564dfgdf/config',
+                    url: '/api/devices/705b200f-059b-4630-bf3d-5d55c3a4a9dc/config',
                     data: $scope.settings,
                     headers: {
                         'Content-Type': "application/json"
@@ -140,7 +141,7 @@
             // Getting the current settings to start with 
             $http({
                 method: 'get',
-                url: '/api/devices/5646564dfgdf/config',
+                url: '/api/devices/705b200f-059b-4630-bf3d-5d55c3a4a9dc/config',
             }).then(function (response) {
                 console.log("received current settings from the server", response.data);
                 $scope.configOptions.forEach(e => {
@@ -150,6 +151,7 @@
                         return
                     }
                 })
+
                 $scope.viewModel.clock= {hr: response.data.tickat.split(":")[0], min :response.data.tickat.split(":")[1]};
                 $scope.viewModel.pulsegap = response.data.pulsegap;
                 $scope.viewModel.interval  = response.data.interval;
