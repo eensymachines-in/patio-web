@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"io"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -13,9 +15,22 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+func getMongoURI() string {
+	file, err := os.Open("/var/run/secrets/mongo_connect_uri")
+	if err != nil {
+		return ""
+	}
+	byt, err := io.ReadAll(file)
+	if err != nil {
+		return ""
+	}
+	return string(byt)
+}
+
 func TestEditUser(t *testing.T) {
+	t.Log()
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://eensyaquap-dev:33n5y+4dm1n@65.20.79.167:57017"))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(getMongoURI()))
 	assert.Nil(t, err, "Unexpected error connecting to database")
 	assert.NotNil(t, client, "Unexpected nil connection after connecting to database")
 	uc := UsersCollection{DbColl: client.Database("aquaponics").Collection("users")}
@@ -77,7 +92,7 @@ func TestEditUser(t *testing.T) {
 
 func TestNewUser(t *testing.T) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://eensyaquap-dev:33n5y+4dm1n@65.20.79.167:57017"))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(getMongoURI()))
 	assert.Nil(t, err, "Unexpected error connecting to database")
 	assert.NotNil(t, client, "Unexpected nil connection after connecting to database")
 	uc := UsersCollection{DbColl: client.Database("aquaponics").Collection("users")}

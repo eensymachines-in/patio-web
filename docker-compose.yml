@@ -26,6 +26,7 @@ services:
     secrets:
       - db_root_username
       - db_root_password
+      - mongo_connect_uri
     container_name: ctn_web 
     stdin_open: true
     networks:
@@ -78,4 +79,5 @@ secrets:
     file: ./db_root_username.secret
   db_root_password:
     file: ./db_root_password.secret
-  
+  mongo_connect_uri:
+    file: ./mongo_connect_uri.secret
