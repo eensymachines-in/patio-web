@@ -3,88 +3,60 @@ package auth
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2/bson"
 )
 
-var (
-	InvalidUserErr = func(e error) error {
-		return &InvalidUser{Internal: e}
-	}
-	FailedDBQueryErr = func(e error) error {
-		return &DBQueryFail{Internal: e}
-	}
-	DuplicateEntryErr = func(e error) error {
-		return &DuplicateEntry{}
-	}
-	UserNotFoundErr = func(e error) error {
-		return &UserNotFound{}
-	}
-)
-
-type UserNotFound struct {
-	Internal error
-}
-
-type DBQueryFail struct {
-	Internal error
-}
-type InvalidUser struct {
-	Internal error
-}
-
-type DuplicateEntry struct {
-	Internal error
-}
-
-func (iu *InvalidUser) Error() string {
-	return fmt.Sprintf("Invalid user: %s", iu.Internal)
-}
-func (dbq *DBQueryFail) Error() string {
-	return fmt.Sprintf("Failed DB query: %s", dbq.Internal)
-}
-func (dbq *DuplicateEntry) Error() string {
-	return fmt.Sprintf("Duplicate user: %s", dbq.Internal)
-}
-func (unf *UserNotFound) Error() string {
-	return fmt.Sprintf("Duplicate user: %s", unf.Internal)
-}
-
 type UsersCollection struct {
 	DbColl *mongo.Collection
 }
 
-type UserPassword string
+// Authenticate : will compare the email id against the password and if succecss sends back the authentication token
+func (u *UsersCollection) Authenticate(email, pass string) (tokenStr string, e error) {
+	usr := User{}
+	ctx, _ := context.WithCancel(context.Background())
 
-func (up UserPassword) IsValid() bool {
-	passRegex := regexp.MustCompile(`^[0-9a-zA-Z_!@#$%^&*-]{9,12}$`) // password is 9-12 characters
-	return passRegex.MatchString(string(up))
-}
-
-func (up UserPassword) StringHash() (string, error) {
-	h, e := bcrypt.GenerateFromPassword([]byte(string(up)), 14)
-	if e != nil {
-		return "", e
+	count, err := u.DbColl.CountDocuments(ctx, bson.M{"email": email})
+	if err != nil {
+		e = FailedDBQueryErr(err)
+		return // getting the user from the database
 	}
-	return string(h), nil
-}
+	if count != 1 {
+		e = UserNotFoundErr(fmt.Errorf("failed to get user with email %s", email))
+		return
+	}
 
-type UserName string
+	err = u.DbColl.FindOne(ctx, bson.M{"email": email}).Decode(&usr)
+	if err != nil {
+		e = FailedDBQueryErr(err)
+		return // getting the user from the database
+	}
+	hash := []byte(usr.Auth)
+	err = bcrypt.CompareHashAndPassword(hash, []byte(pass))
+	if err != nil {
+		e = MismatchPasswdErr(err)
+		return // passwordd did not match
+	}
 
-func (un UserName) IsValid() bool {
-	passRegex := regexp.MustCompile(`^[a-zA-Z]+$`) // password is 9-12 characters
-	return passRegex.MatchString(string(un))
-}
-
-type UserEmail string
-
-func (ue UserEmail) IsValid() bool {
-	passRegex := regexp.MustCompile(`^[a-zA-Z0-9]+[_.-]*[a-zA-Z0-9]*@[a-zA-Z0-9]+[.]{1}[a-zA-Z0-9]{2,}$`) // password is 9-12 characters
-	return passRegex.MatchString(string(ue))
+	// generate new jwt for this login
+	tok := jwt.New(jwt.SigningMethodHS256) // this signing method demands key of certain type
+	claims := tok.Claims.(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(10 * time.Minute)
+	claims["authorized"] = true
+	claims["user"] = email
+	claims["user_role"] = usr.Role
+	tokenStr, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
+	if err != nil {
+		e = AuthTokenErr(err) // error generating token
+		tokenStr = ""
+		return
+	}
+	return
 }
 
 // EditUser: this can change the user fields given the email
@@ -158,7 +130,8 @@ func (u *UsersCollection) NewUser(usr *User) error {
 	}
 
 	// Finally inserting the new user details
-	_, err = u.DbColl.InsertOne(ctx, usr)
+	insertResult, err := u.DbColl.InsertOne(ctx, usr)
+	usr.Id = insertResult.InsertedID.(primitive.ObjectID).Hex() // newly inserted document id
 	if err != nil {
 		return fmt.Errorf("failed NewUser : %s", err)
 	}

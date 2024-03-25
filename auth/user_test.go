@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"io"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -15,22 +13,42 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func getMongoURI() string {
-	file, err := os.Open("/var/run/secrets/mongo_connect_uri")
+const (
+	DB_URI_TEST = "mongodb://u_testing:10645641993@localhost:57017/aquaponics"
+)
+
+func TestAuthentication(t *testing.T) {
+	ctx, _ := context.WithCancel(context.Background())
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(DB_URI_TEST))
+	assert.Nil(t, err, "Unexpected error connecting to database")
+	assert.NotNil(t, client, "Unexpected nil connection after connecting to database")
+	uc := UsersCollection{DbColl: client.Database("aquaponics").Collection("users")}
+
+	data := &User{Name: "Niranjan", Email: "niranjan_Awati@gmail.com", Role: SuperUser, TelegID: int64(53454353), Auth: "someRandom"}
+	uc.NewUser(data) // setting up the test
+	defer uc.DbColl.DeleteMany(ctx, bson.M{})
+
+	tok, err := uc.Authenticate(data.Email, "someRandom")
+	assert.Nil(t, err, "Unexpected error when authenticating user")
 	if err != nil {
-		return ""
+		t.Log(err.Error())
+
 	}
-	byt, err := io.ReadAll(file)
-	if err != nil {
-		return ""
-	}
-	return string(byt)
+	t.Log(tok)
+	// For mismatching password for the usr that exists
+	tok, err = uc.Authenticate(data.Email, "someRandom1")
+	assert.NotNil(t, err, "Unexpected nil error when authenticating user")
+	assert.Equal(t, "", tok, "Unexpected token value in error case ")
+
+	// For the user that does not exists
+	tok, err = uc.Authenticate("someone@donot.exists", "someRandom")
+	assert.NotNil(t, err, "Unexpected nil error when authenticating user")
+	assert.Equal(t, "", tok, "Unexpected token value in error case ")
 }
 
 func TestEditUser(t *testing.T) {
-	t.Log()
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(getMongoURI()))
+	ctx, _ := context.WithCancel(context.Background())
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(DB_URI_TEST))
 	assert.Nil(t, err, "Unexpected error connecting to database")
 	assert.NotNil(t, client, "Unexpected nil connection after connecting to database")
 	uc := UsersCollection{DbColl: client.Database("aquaponics").Collection("users")}
@@ -91,11 +109,13 @@ func TestEditUser(t *testing.T) {
 }
 
 func TestNewUser(t *testing.T) {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(getMongoURI()))
+	ctx, _ := context.WithCancel(context.Background())
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(DB_URI_TEST))
 	assert.Nil(t, err, "Unexpected error connecting to database")
 	assert.NotNil(t, client, "Unexpected nil connection after connecting to database")
 	uc := UsersCollection{DbColl: client.Database("aquaponics").Collection("users")}
+
 	data := []User{
 		{Name: "Niranjan", Email: "niranjan_Awati@gmail.com", Role: SuperUser, TelegID: int64(53454353), Auth: "9characters"},
 		{Name: "Awati", Email: "kneerunjun@gmail.com", Role: Admin, TelegID: int64(53454353), Auth: "someRandom@2"},
@@ -104,9 +124,11 @@ func TestNewUser(t *testing.T) {
 	}
 	for _, u := range data {
 		err := uc.NewUser(&u)
+		t.Log(u)
 		assert.Nil(t, err, "Unexpected error when inserting new user")
 	}
-	c, _ := uc.DbColl.CountDocuments(ctx, bson.M{})
+	c, err := uc.DbColl.CountDocuments(ctx, bson.M{})
+	assert.Nil(t, err, "Unexpected err when counting documents")
 	assert.Equal(t, int64(4), c, "Expected 4 document in the collection")
 
 	// Now for the negative tests
