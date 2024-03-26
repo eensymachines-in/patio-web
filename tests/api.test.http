@@ -1,0 +1,21 @@
+### simple new user insert test
+POST  http://localhost:8081/api/users
+Content-Type: application/json
+
+{
+    "email": "kneerunjun@gmail.com",
+    "auth": "jun%41993",
+    "telegid":645645677,
+    "role":0,
+    "name": "Niranjan Awati"
+
+}
+
+### simple authentication test 
+POST http://localhost:8081/api/login
+content-type: application/json
+
+{
+    "email": "kneerunjun@gmail.com",
+    "auth": "jun%41993"
+}

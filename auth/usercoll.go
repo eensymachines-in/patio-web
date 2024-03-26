@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,30 +18,24 @@ type UsersCollection struct {
 }
 
 // Authenticate : will compare the email id against the password and if succecss sends back the authentication token
-func (u *UsersCollection) Authenticate(email, pass string) (tokenStr string, e error) {
-	usr := User{}
+func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
+	// usr := User{}
 	ctx, _ := context.WithCancel(context.Background())
 
-	count, err := u.DbColl.CountDocuments(ctx, bson.M{"email": email})
-	if err != nil {
-		e = FailedDBQueryErr(err)
-		return // getting the user from the database
+	count, err := u.DbColl.CountDocuments(ctx, bson.M{"email": usr.Email})
+	if dbe := FailedDBQueryErr(err); dbe != nil {
+		return dbe
 	}
 	if count != 1 {
-		e = UserNotFoundErr(fmt.Errorf("failed to get user with email %s", email))
-		return
+		return UserNotFoundErr(fmt.Errorf("failed to get user with email %s", usr.Email))
 	}
-
-	err = u.DbColl.FindOne(ctx, bson.M{"email": email}).Decode(&usr)
-	if err != nil {
-		e = FailedDBQueryErr(err)
-		return // getting the user from the database
+	clearTextPass := usr.Auth // before unmarshalling the user from the database, getting the cleartext password
+	if err := FailedDBQueryErr(u.DbColl.FindOne(ctx, bson.M{"email": usr.Email}).Decode(usr)); err != nil {
+		return err
 	}
 	hash := []byte(usr.Auth)
-	err = bcrypt.CompareHashAndPassword(hash, []byte(pass))
-	if err != nil {
-		e = MismatchPasswdErr(err)
-		return // passwordd did not match
+	if err := MismatchPasswdErr(bcrypt.CompareHashAndPassword(hash, []byte(clearTextPass))); err != nil {
+		return err
 	}
 
 	// generate new jwt for this login
@@ -48,21 +43,19 @@ func (u *UsersCollection) Authenticate(email, pass string) (tokenStr string, e e
 	claims := tok.Claims.(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(10 * time.Minute)
 	claims["authorized"] = true
-	claims["user"] = email
+	claims["user"] = usr.Email
 	claims["user_role"] = usr.Role
-	tokenStr, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
-	if err != nil {
-		e = AuthTokenErr(err) // error generating token
-		tokenStr = ""
-		return
+	usr.Auth, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
+	if e := AuthTokenErr(err); e != nil {
+		return e
 	}
-	return
+	return nil
 }
 
 // EditUser: this can change the user fields given the email
 // can alter name passwd and telegid when editing
 // email cannot be altered, create a new account with a new email to use it
-func (u *UsersCollection) EditUser(email string, name, passwd string, telegid int64) error {
+func (u *UsersCollection) EditUser(email string, name, passwd string, telegid int64) httperr.HttpErr {
 	ctx, _ := context.WithCancel(context.Background())
 	cnt, err := u.DbColl.CountDocuments(ctx, bson.M{"email": email})
 	if err != nil || cnt == 0 {
@@ -99,7 +92,7 @@ func (u *UsersCollection) EditUser(email string, name, passwd string, telegid in
 	return nil
 }
 
-func (u *UsersCollection) NewUser(usr *User) error {
+func (u *UsersCollection) NewUser(usr *User) httperr.HttpErr {
 	// Chcking for the name
 	if !UserName(usr.Name).IsValid() {
 		return InvalidUserErr(fmt.Errorf("invalid name of the user"))
@@ -131,9 +124,9 @@ func (u *UsersCollection) NewUser(usr *User) error {
 
 	// Finally inserting the new user details
 	insertResult, err := u.DbColl.InsertOne(ctx, usr)
-	usr.Id = insertResult.InsertedID.(primitive.ObjectID).Hex() // newly inserted document id
+	usr.Id = insertResult.InsertedID.(primitive.ObjectID) // newly inserted document id
 	if err != nil {
-		return fmt.Errorf("failed NewUser : %s", err)
+		return FailedDBQueryErr(fmt.Errorf("failed NewUser : %s", err))
 	}
 	return nil
 }

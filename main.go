@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -94,29 +93,9 @@ func main() {
 	})
 	api := r.Group("/api")
 	api.Use(CORS).Use(MongoConnect)
-
-	api.POST("/login", func(c *gin.Context) {
-		login := Login{}
-		byt, err := io.ReadAll(c.Request.Body)
-		if err != nil { //ill formed payload
-			c.JSON(http.StatusBadRequest, gin.H{})
-			return
-		}
-		defer c.Request.Body.Close()
-		if err := json.Unmarshal(byt, &login); err != nil { // unexpected format of the payload
-			c.JSON(http.StatusBadRequest, gin.H{})
-			return
-		}
-		if login.UserId != "niranjan_awati" && login.UserId != "tejas_cholkar" {
-			c.JSON(http.StatusUnauthorized, gin.H{})
-			return
-		}
-		if (login.UserId == "niranjan_awati" && login.Password == "280382") || (login.UserId == "tejas_cholkar" && login.Password == "040981") {
-			c.JSON(http.StatusOK, gin.H{})
-		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{})
-		}
-	})
+	// TODO:  test this api
+	api.POST("/login", HndlUserAuth)
+	api.POST("/users", HndlUsers)
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")

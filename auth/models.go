@@ -3,6 +3,7 @@ package auth
 import (
 	"regexp"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,7 +34,7 @@ func (up UserPassword) StringHash() (string, error) {
 type UserName string
 
 func (un UserName) IsValid() bool {
-	passRegex := regexp.MustCompile(`^[a-zA-Z]+$`) // password is 9-12 characters
+	passRegex := regexp.MustCompile(`^[a-zA-Z\s]+$`) // password is 9-12 characters
 	return passRegex.MatchString(string(un))
 }
 
@@ -46,10 +47,10 @@ func (ue UserEmail) IsValid() bool {
 
 // User : any user in the system, can be authenticated against database
 type User struct {
-	Id      string
-	Name    string   `bson:"name"`
-	Email   string   `bson:"email"`
-	Role    UserRole `bson:"role"`
-	TelegID int64    `bson:"telegid"`
-	Auth    string   `bson:"auth"`
+	Id      primitive.ObjectID `bson:"_id,omitempty" json:"id"` // omit empty to indicate empty when marshalling and inserting
+	Name    string             `bson:"name" json:"name"`
+	Email   string             `bson:"email" json:"email"`
+	Role    UserRole           `bson:"role" json:"role"`
+	TelegID int64              `bson:"telegid" json:"telegid"`
+	Auth    string             `bson:"auth"`
 }

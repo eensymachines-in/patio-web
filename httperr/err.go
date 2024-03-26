@@ -31,7 +31,17 @@ var (
 	ErrGatewayConnect = func(e error) HttpErr {
 		return (&eGtwyConn{}).SetInternal(e)
 	}
+	ErrAuthentication = func(e error) HttpErr {
+		return (&eUsrAuth{}).SetInternal(e)
+	}
+	ErrResourceNotFound = func(e error) HttpErr {
+		return (&ResNotFound{}).SetInternal(e)
+	}
 )
+
+type eUsrAuth struct {
+	Internal error
+}
 
 type eCtxParamMissing struct {
 	Internal error
@@ -55,6 +65,17 @@ type eGtwyConn struct {
 	Internal error
 }
 
+type ResNotFound struct {
+	Internal error
+}
+
+func (rnf *ResNotFound) ClientErrData() string {
+	return "Resource you were looking for is not found, check and send again"
+}
+
+func (eua *eUsrAuth) ClientErrData() string {
+	return "You are unauthorized, check your password and try again"
+}
 func (ecpm *eCtxParamMissing) ClientErrData() string {
 	return "One or more components of the server isnt working as it should be. Kindly contact the sys admin"
 }
@@ -75,6 +96,14 @@ func (esr *eSendRabbit) ClientErrData() string {
 }
 func (egc *eGtwyConn) ClientErrData() string {
 	return "One or more gateways for the server is down/forbidden/closed, report this to a sysadmin to get it fixed"
+}
+
+func (rnf *ResNotFound) Error() string {
+	return rnf.Internal.Error()
+}
+
+func (eua *eUsrAuth) Error() string {
+	return eua.Internal.Error()
 }
 
 func (ecpm *eCtxParamMissing) Error() string {
@@ -98,6 +127,22 @@ func (esr *eSendRabbit) Error() string {
 
 func (egc *eGtwyConn) Error() string {
 	return egc.Internal.Error()
+}
+
+func (rnf *ResNotFound) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	rnf.Internal = ie
+	return rnf
+}
+
+func (eua *eUsrAuth) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	eua.Internal = ie
+	return eua
 }
 
 func (egc *eGtwyConn) SetInternal(ie error) HttpErr {
@@ -152,10 +197,24 @@ func (eb *eBinding) SetInternal(ie error) HttpErr {
 	return eb
 }
 
+func (rnf *ResNotFound) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": rnf.Internal,
+	}).Error("resource now found..")
+	return rnf
+}
+
+func (eua *eUsrAuth) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": eua.Internal,
+	}).Error("failed user authentication")
+	return eua
+}
+
 func (egc *eGtwyConn) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": egc.Internal,
-	}).Error("failed sending message to rabbitmq")
+	}).Error("failed connection to gateway")
 	return egc
 }
 func (esr *eSendRabbit) Log(le *log.Entry) HttpErr {
@@ -199,6 +258,14 @@ func (eb *eBinding) Log(le *log.Entry) HttpErr {
 		"internal_err": eb.Internal,
 	}).Error("one or more field validations failed")
 	return eb
+}
+
+func (rnf *ResNotFound) HttpStatusCode() int {
+	return http.StatusNotFound
+}
+
+func (eua *eUsrAuth) HttpStatusCode() int {
+	return http.StatusUnauthorized
 }
 
 func (egc *eGtwyConn) HttpStatusCode() int {
