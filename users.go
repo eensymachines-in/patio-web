@@ -1,5 +1,13 @@
 package main
 
+/* =========================
+project 		: ipatio-web
+date			: MArch` 2024
+author			: kneerunjun@gmail.com
+Copyrights		: Eensy Machines
+About			: Handlers for USER CRUD & authentication when using the GIN framework
+				: USes the httperr Error framework for uniform error handling in requests
+============================*/
 import (
 	"net/http"
 
@@ -10,42 +18,84 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// HndlUsers : Handle all routes that require User CRUD
+//
+// users are uniquely identified by email
+//
+// uses the mongo connection
+//
+// POST/ PUT require user details - bound to auth.User{}
+//
+// GET requires only email
 func HndlUsers(c *gin.Context) {
+	// Bindings ..
 	usr := auth.User{}
-	err := c.ShouldBind(&usr)
+	err := httperr.ErrBinding(c.ShouldBind(&usr))
 	if err != nil {
-		httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
-			"stack": "HndlUserAuth",
-		}))
+		httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+			"stack": "HndlUsers",
+		})) // binding failed -
 		return
 	}
-	val, _ := c.Get("mongo-client")
+	// Mongo connections
+	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
 	mongoClient := val.(*mongo.Client)
 	uc := auth.UsersCollection{DbColl: mongoClient.Database("aquaponics").Collection("users")}
+
+	// Actual handler and response
 	if c.Request.Method == "POST" { // login requests are posts requests
 		err := uc.NewUser(&usr)
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlUserAuth",
+				"stack": "HndlUsers",
 			}))
 			return
 		}
 		c.AbortWithStatusJSON(http.StatusOK, usr)
+	} else if c.Request.Method == "DELETE" {
+		err := uc.DeleteUser(c.Param("email"))
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUsers",
+			}))
+			return
+		}
+		c.AbortWithStatus(http.StatusOK)
+	} else if c.Request.Method == "PATCH" {
+		// the identifier shall be used from the url param and not from the payload body
+		// identifier from url can be email or id hex  - EditUser has to figure it out
+		err := uc.EditUser(c.Param("email"), usr.Name, usr.Auth, usr.TelegID)
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUsers",
+			}))
+			return
+		}
+		c.AbortWithStatus(http.StatusOK)
 	}
 }
+
+// HndlUserAuth : Handles only user authentication, POST = login, GET = authorization
+//
+// # JWTtoken for authorization and thru authentication
+//
+// 401 when password fails
 func HndlUserAuth(c *gin.Context) {
+	// --------- request biningg
 	usr := auth.User{}
-	err := c.ShouldBind(&usr)
+	err := httperr.ErrBinding(c.ShouldBind(&usr))
 	if err != nil {
-		httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
+		httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 			"stack": "HndlUserAuth",
 		}))
 		return
 	}
-	// getting the mongo connection
+	// --------- mongo connections
 	val, _ := c.Get("mongo-client")
 	mongoClient := val.(*mongo.Client)
 	uc := auth.UsersCollection{DbColl: mongoClient.Database("aquaponics").Collection("users")}
+
+	// --------- request handling
 	if c.Request.Method == "POST" { // login requests are posts requests
 		err := uc.Authenticate(&usr)
 		if err != nil {

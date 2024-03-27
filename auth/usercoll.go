@@ -1,5 +1,12 @@
 package auth
 
+/* =========================
+project 		: ipatio-web
+date			: MArch` 2024
+author			: kneerunjun@gmail.com
+Copyrights		: Eensy Machines
+About			: Actual CRUD operation engine, does database operations, & fitting the appropriate httperr to send back on the way out over http. Does not connect to the database but uses the collection of an already connected database to fire queries.
+============================*/
 import (
 	"context"
 	"fmt"
@@ -17,7 +24,27 @@ type UsersCollection struct {
 	DbColl *mongo.Collection
 }
 
-// Authenticate : will compare the email id against the password and if succecss sends back the authentication token
+// Authenticate : will compare the email id against the hash of the password, upon success will sedn back the auth token.
+// Such a token is replaced on usr.Auth on its way back a result
+// This only if the user exists, else Error is returned.
+//
+//
+/*
+	usr := User{Email:"johndoe@gmail.com", Auth: "ClearTextPassword"}
+	mongoClient := val.(*mongo.Client)
+	uc := auth.UsersCollection{DbColl: mongoClient.Database("dbname").Collection("collname")}
+	err :=uc.Authenticate(&usr)
+	if err !=nil{
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "location-of-calling stack",
+			}))
+			return
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusOK, usr) // no error - user authenticated
+
+*/
 func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
 	// usr := User{}
 	ctx, _ := context.WithCancel(context.Background())
@@ -52,12 +79,39 @@ func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
 	return nil
 }
 
-// EditUser: this can change the user fields given the email
-// can alter name passwd and telegid when editing
-// email cannot be altered, create a new account with a new email to use it
+// EditUser: Can edit a few fields of the user in the database, except the email.
+// Typically used in PUT requests
+// If the field to change is not set, will NOT update - omit empty
+//
+/*
+	usr := User{Email:"johndoe@gmail.com", Auth: "ClearTextPassword"}
+	mongoClient := val.(*mongo.Client)
+	uc := auth.UsersCollection{DbColl: mongoClient.Database("dbname").Collection("collname")}
+	err :=uc.EditUser(usr.Email, usr.Name, usr.Auth, usr.TelegID)
+	if err !=nil{
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "location-of-calling stack",
+			}))
+			return
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusOK, usr) // no error - user authenticated
+*/
 func (u *UsersCollection) EditUser(email string, name, passwd string, telegid int64) httperr.HttpErr {
 	ctx, _ := context.WithCancel(context.Background())
-	cnt, err := u.DbColl.CountDocuments(ctx, bson.M{"email": email})
+	// Figuring out if the identifying param is email / id hex
+	var flt bson.M
+	if UserEmail(email).IsValid() {
+		flt = bson.M{"email": email}
+	} else {
+		hexID, err := primitive.ObjectIDFromHex(email)
+		if err != nil {
+			return InvalidUserErr(fmt.Errorf("User identifier is invalid, check and send again"))
+		}
+		flt = bson.M{"_id": hexID}
+	}
+	cnt, err := u.DbColl.CountDocuments(ctx, flt)
 	if err != nil || cnt == 0 {
 		return UserNotFoundErr(err) // no user for editing
 	}
@@ -83,8 +137,8 @@ func (u *UsersCollection) EditUser(email string, name, passwd string, telegid in
 	if telegid != int64(0) {
 		patch["telegid"] = telegid
 	}
-	ctx, _ = context.WithCancel(context.Background())                               // if set withtimeout, 5 seconds isnt enough since generating the hash would take some time dependingon theccost
-	_, err = u.DbColl.UpdateOne(ctx, bson.M{"email": email}, bson.M{"$set": patch}) // user updated
+	ctx, _ = context.WithCancel(context.Background())            // if set withtimeout, 5 seconds isnt enough since generating the hash would take some time dependingon theccost
+	_, err = u.DbColl.UpdateOne(ctx, flt, bson.M{"$set": patch}) // user updated
 
 	if err != nil {
 		return FailedDBQueryErr(err)
@@ -92,6 +146,26 @@ func (u *UsersCollection) EditUser(email string, name, passwd string, telegid in
 	return nil
 }
 
+// NewUser : Can insert new user account if it isnt already inserted.
+// Email of the account serves as the unique identifier for the account. No 2 accounts with the same email can exists in the same database.
+// Email, password, and Name all have regex validation checks - anyone fails it will not insert the account and return 400.
+// Error ireturned is directly compatible with httperr.HttpErrOrOkDispatch
+//
+/*
+	usr := User{Email:"johndoe@gmail.com", Auth: "ClearTextPassword", Name: "John Doe", TelegID: 6645654654}
+	mongoClient := val.(*mongo.Client)
+	uc := auth.UsersCollection{DbColl: mongoClient.Database("dbname").Collection("collname")}
+	err :=uc.NewUser(usr) // of the type httperr.HttpErr
+	if err !=nil{
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "location-of-calling stack",
+			}))
+			return
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusOK, usr) // no error - user authenticated
+*/
 func (u *UsersCollection) NewUser(usr *User) httperr.HttpErr {
 	// Chcking for the name
 	if !UserName(usr.Name).IsValid() {
@@ -113,7 +187,7 @@ func (u *UsersCollection) NewUser(usr *User) httperr.HttpErr {
 	}
 
 	// Checking for duplicates
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithCancel(context.Background())
 	cnt, err := u.DbColl.CountDocuments(ctx, bson.M{"email": usr.Email}) // no 2 users can have the same email
 	if err != nil {
 		return FailedDBQueryErr(err)
@@ -127,6 +201,47 @@ func (u *UsersCollection) NewUser(usr *User) httperr.HttpErr {
 	usr.Id = insertResult.InsertedID.(primitive.ObjectID) // newly inserted document id
 	if err != nil {
 		return FailedDBQueryErr(fmt.Errorf("failed NewUser : %s", err))
+	}
+	return nil
+}
+
+// DeleteUser : given the email/id this can delete the account. Once deleted the account cannot be recovered.
+// Incase the account isnt found throws NotFoundErr
+// It can figure out if the email or ID is used for addressing the account to be deleted
+//
+/*
+	mongoClient := val.(*mongo.Client)
+	uc := auth.UsersCollection{DbColl: mongoClient.Database("dbname").Collection("collname")}
+	err :=uc.DeleteUser("johndoe@gmail.com") // of the type httperr.HttpErr
+	if err !=nil{
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "location-of-calling stack",
+			}))
+			return
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusOK, usr) // no error - user authenticated
+*/
+func (u *UsersCollection) DeleteUser(emailOrID string) httperr.HttpErr {
+	ctx, _ := context.WithCancel(context.Background())
+	var flt bson.M
+	if !UserEmail(emailOrID).IsValid() { // if its email or hex object id
+		// return InvalidUserErr(fmt.Errorf("invalid email for user"))
+		oid, err := primitive.ObjectIDFromHex(emailOrID)
+		if err != nil {
+			return InvalidUserErr(err) // id of the user is invalid
+		}
+		flt = bson.M{"_id": oid}
+	} else {
+		flt = bson.M{"email": emailOrID}
+	}
+	delResult, err := u.DbColl.DeleteOne(ctx, flt)
+	if err != nil {
+		return FailedDBQueryErr(fmt.Errorf("failed DeleteUser : %s", err))
+	}
+	if delResult.DeletedCount == 0 {
+		return UserNotFoundErr(fmt.Errorf("user account %s was not found", emailOrID))
 	}
 	return nil
 }

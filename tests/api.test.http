@@ -11,11 +11,29 @@ Content-Type: application/json
 
 }
 
+### Simple patch requesst for the existing user
+
+PATCH  http://localhost:8081/api/users/6604036883d661a40dc47a1e
+content-type: application/json
+
+{
+    "email": "kneerunjun@gmail.com",
+    "auth": "dunjun%41993",
+    "telegid":645645699
+}
+
+
+
 ### simple authentication test 
 POST http://localhost:8081/api/login
 content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "jun%41993"
+    "auth": "runjun%41993"
 }
+
+
+### Deleting the user account
+
+DELETE   http://localhost:8081/api/users/kneerunjun@gmail.com

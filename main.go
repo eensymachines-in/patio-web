@@ -96,6 +96,8 @@ func main() {
 	// TODO:  test this api
 	api.POST("/login", HndlUserAuth)
 	api.POST("/users", HndlUsers)
+	api.DELETE("/users/:email", HndlUsers) // single account delete
+	api.PATCH("/users/:email", HndlUsers) // single account delete
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")
