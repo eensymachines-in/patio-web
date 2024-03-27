@@ -53,4 +53,5 @@ type User struct {
 	Role    UserRole           `bson:"role" json:"role"`
 	TelegID int64              `bson:"telegid" json:"telegid"`
 	Auth    string             `bson:"auth"`
+	AuthTok string             `json:"authtok"` // has no significance in bson
 }

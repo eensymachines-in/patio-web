@@ -13,12 +13,12 @@ Content-Type: application/json
 
 ### Simple patch requesst for the existing user
 
-PATCH  http://localhost:8081/api/users/6604036883d661a40dc47a1e
+PATCH  http://localhost:8081/api/users/66042fc255e438864127511b
 content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "dunjun%41993",
+    "auth": "radaa%41993",
     "telegid":645645699
 }
 
@@ -30,7 +30,7 @@ content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "runjun%41993"
+    "auth": "radaa%41993"
 }
 
 

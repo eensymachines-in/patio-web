@@ -72,7 +72,7 @@ func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
 	claims["authorized"] = true
 	claims["user"] = usr.Email
 	claims["user_role"] = usr.Role
-	usr.Auth, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
+	usr.AuthTok, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
 	if e := AuthTokenErr(err); e != nil {
 		return e
 	}
@@ -112,8 +112,11 @@ func (u *UsersCollection) EditUser(email string, name, passwd string, telegid in
 		flt = bson.M{"_id": hexID}
 	}
 	cnt, err := u.DbColl.CountDocuments(ctx, flt)
-	if err != nil || cnt == 0 {
-		return UserNotFoundErr(err) // no user for editing
+	if err != nil {
+		return FailedDBQueryErr(err) // no user for editing
+	}
+	if cnt == 0 {
+		return UserNotFoundErr(fmt.Errorf("failed to get user %s", email))
 	}
 	patch := bson.M{}
 	if passwd != "" { // if passwd is empty we dont want to change it
