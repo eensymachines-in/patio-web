@@ -32,7 +32,14 @@ var (
 	AuthTokenErr = func(e error) httperr.HttpErr {
 		return (&GenTokenFail{}).SetInternal(e)
 	}
+	InvalidTokenErr = func(e error) httperr.HttpErr {
+		return (&eInvalidToken{}).SetInternal(e)
+	}
 )
+
+type eInvalidToken struct {
+	Internal error
+}
 
 type GenTokenFail struct {
 	Internal error
@@ -80,6 +87,14 @@ func (gt *GenTokenFail) Error() string {
 
 // =================== Impleementation of HttpErr interface
 
+func (it *eInvalidToken) SetInternal(ie error) httperr.HttpErr {
+	if ie == nil {
+		return nil
+	}
+	it.Internal = ie
+	return it
+}
+
 func (iu *InvalidUser) SetInternal(ie error) httperr.HttpErr {
 	if ie == nil {
 		return nil
@@ -124,6 +139,12 @@ func (gt *GenTokenFail) SetInternal(ie error) httperr.HttpErr {
 }
 
 // Logging of the error
+func (it *eInvalidToken) Log(le *log.Entry) httperr.HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": it.Internal,
+	}).Error("invalid or expired token")
+	return it
+}
 func (iu *InvalidUser) Log(le *log.Entry) httperr.HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": iu.Internal,
@@ -162,7 +183,9 @@ func (gt *GenTokenFail) Log(le *log.Entry) httperr.HttpErr {
 }
 
 // Client error, the one that gets dispatched to the http client
-
+func (it *eInvalidToken) ClientErrData() string {
+	return "Your authorization has expired/invalidated, kindly login again"
+}
 func (iu *InvalidUser) ClientErrData() string {
 	return "Invalid user when authenticating it, check all fields and send again"
 }
@@ -183,7 +206,9 @@ func (gt *GenTokenFail) ClientErrData() string {
 }
 
 // implementing http status code
-
+func (it *eInvalidToken) HttpStatusCode() int {
+	return http.StatusForbidden
+}
 func (iu *InvalidUser) HttpStatusCode() int {
 	return http.StatusBadRequest
 }

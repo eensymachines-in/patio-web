@@ -1,7 +1,15 @@
 (function () {
-    angular.module("patio-app").controller("loginCtrl", function ($scope, $http, $location) {
+    angular.module("patio-app").controller("loginCtrl", function ($scope, $http, $location, $window) {
         $scope.loginErr = null
         $scope.validationErr = false
+        var clear_session = function(){
+            $window.localStorage.removeItem("user-id");
+            $window.localStorage.removeItem("user-email");
+            $window.localStorage.removeItem("user-name");
+            $window.localStorage.removeItem("user-role");
+            $window.localStorage.removeItem("user-telegid");
+            $window.localStorage.removeItem("user-authtok");
+        }; clear_session();
         $scope.login = {
             usrid: "",
             passwd: "",
@@ -17,11 +25,18 @@
                 $http({
                     method: 'post',
                     url: '/api/login',
-                    data: { u: this.usrid, p: this.passwd },
+                    data: { email: this.usrid, auth: this.passwd }, 
                     headers: {
                         'Content-Type': "application/json"
                     },
                 }).then(function (response) {
+                    // Instead of the sessionStorage we are using localStorage since when on the same browser we want to carry ahead the login token to a new tab on the same browser 
+                    $window.localStorage.setItem("user-id", response.data.id);
+                    $window.localStorage.setItem("user-email", response.data.email);
+                    $window.localStorage.setItem("user-name", response.data.name);
+                    $window.localStorage.setItem("user-role", response.data.role);
+                    $window.localStorage.setItem("user-telegid", response.data.telegid);
+                    $window.localStorage.setItem("user-authtok", response.data.authtok);
                     $location.url("/settings") // logging in to the settings page 
                 }, function (response) {
                     if (response.status == 401) {

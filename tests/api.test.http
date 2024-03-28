@@ -8,17 +8,17 @@ Content-Type: application/json
     "telegid":645645677,
     "role":0,
     "name": "Niranjan Awati"
-
 }
 
 ### Simple patch requesst for the existing user
 
-PATCH  http://localhost:8081/api/users/66042fc255e438864127511b
+PATCH  http://localhost:8081/api/users/6604ade011e8c491e94eb022
 content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "radaa%41993",
+    "auth": "jenc%41993",
+    "name": "Niranjan Vijay Awati",
     "telegid":645645699
 }
 
@@ -30,9 +30,13 @@ content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "radaa%41993"
+    "auth": "jun%41993"
 }
 
+### simple authorize request, sends the token to get an http status code
+
+GET http://localhost:8081/api/authorize
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTE2MzM1NjEsImlzcyI6InBhdGlvLXdlYiBzZXJ2ZXIiLCJzdWIiOiJVc2VyIGF1dGhvcml6YXRpb24gcmVxdWVzdCIsInVzZXIiOiJrbmVlcnVuanVuQGdtYWlsLmNvbSIsInVzZXItcm9sZSI6MH0.FxqfR331ZlaOT3NMnK95iDXS9EgT_iZYKWm-_zlreOk
 
 ### Deleting the user account
 

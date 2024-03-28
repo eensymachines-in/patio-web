@@ -14,14 +14,59 @@ import (
 
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/golang-jwt/jwt"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2/bson"
 )
 
+var (
+	JWTSigningKey string = "33n5ymach1ne5" // for key generation and parsing it back to token
+)
+
 type UsersCollection struct {
 	DbColl *mongo.Collection
+}
+
+// Authorize : Does not make any database connections - will but validate a token that was already generated from a prior login attempt
+//
+/*
+	tok := c.Request.Header.Get("Authorization")
+	if tok == "" {
+		httperr.HttpErrOrOkDispatch(c, httperr.ErrForbidden(fmt.Errorf("empty token cannot request authorization")), log.WithFields(log.Fields{
+			"stack": "HndlUserAuth",
+		}))
+		return
+	} else {
+		err := uc.Authorize(tok) // user fields would be empty per say since its only the token you are authorizing
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUserAuth",
+			}))
+			return
+		}
+		c.AbortWithStatus(http.StatusOK)
+	}
+*/
+func (u *UsersCollection) Authorize(tok string) httperr.HttpErr {
+	jTok, err := jwt.ParseWithClaims(tok, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(JWTSigningKey), nil
+	})
+	if err != nil {
+		return InvalidTokenErr(err)
+	}
+	claims, ok := jTok.Claims.(*CustomClaims)
+	if !ok || !jTok.Valid {
+		return InvalidTokenErr(fmt.Errorf("invalid token or claims"))
+	}
+	// NOTE: there isnt a need to check for ExpiredAt field since its already checked when we do ParsewithClaims
+	logrus.WithFields(logrus.Fields{
+		"expires at": claims.StandardClaims.ExpiresAt,
+		"user":       claims.User,
+		"user_role":  claims.UserRole,
+	}).Debug("retreiving claims")
+	return nil
 }
 
 // Authenticate : will compare the email id against the hash of the password, upon success will sedn back the auth token.
@@ -46,9 +91,7 @@ type UsersCollection struct {
 
 */
 func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
-	// usr := User{}
 	ctx, _ := context.WithCancel(context.Background())
-
 	count, err := u.DbColl.CountDocuments(ctx, bson.M{"email": usr.Email})
 	if dbe := FailedDBQueryErr(err); dbe != nil {
 		return dbe
@@ -64,15 +107,18 @@ func (u *UsersCollection) Authenticate(usr *User) httperr.HttpErr {
 	if err := MismatchPasswdErr(bcrypt.CompareHashAndPassword(hash, []byte(clearTextPass))); err != nil {
 		return err
 	}
-
 	// generate new jwt for this login
-	tok := jwt.New(jwt.SigningMethodHS256) // this signing method demands key of certain type
-	claims := tok.Claims.(jwt.MapClaims)
-	claims["exp"] = time.Now().Add(10 * time.Minute)
-	claims["authorized"] = true
-	claims["user"] = usr.Email
-	claims["user_role"] = usr.Role
-	usr.AuthTok, err = tok.SignedString([]byte("33n5ymach1ne5")) // []byte is ok since signing method is SigningMethodHS256
+	claims := CustomClaims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
+			Issuer:    "patio-web server",
+			Subject:   "User authorization request",
+		},
+		User:     usr.Email,
+		UserRole: usr.Role,
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)   // this signing method demands key of certain type
+	usr.AuthTok, err = tok.SignedString([]byte(JWTSigningKey)) // []byte is ok since signing method is SigningMethodHS256
 	if e := AuthTokenErr(err); e != nil {
 		return e
 	}
@@ -181,7 +227,7 @@ func (u *UsersCollection) NewUser(usr *User) httperr.HttpErr {
 	}
 	hashedPasswd, err := up.StringHash()
 	if err != nil {
-		return InvalidUserErr(fmt.Errorf("invalid password for user"))
+		return InvalidUserErr(fmt.Errorf("error generating the hash of the password"))
 	}
 	usr.Auth = hashedPasswd
 

@@ -9,6 +9,7 @@ About			: Handlers for USER CRUD & authentication when using the GIN framework
 				: USes the httperr Error framework for uniform error handling in requests
 ============================*/
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/eensymachines-in/patio-web/auth"
@@ -51,7 +52,7 @@ func HndlUsers(c *gin.Context) {
 			}))
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusOK, usr)
+		c.AbortWithStatusJSON(http.StatusOK, &usr)
 	} else if c.Request.Method == "DELETE" {
 		err := uc.DeleteUser(c.Param("email"))
 		if err != nil {
@@ -106,5 +107,23 @@ func HndlUserAuth(c *gin.Context) {
 		}
 		// time to send back the token
 		c.AbortWithStatusJSON(http.StatusOK, usr)
+	} else if c.Request.Method == "GET" {
+		// Trying to authorize the requests
+		tok := c.Request.Header.Get("Authorization")
+		if tok == "" {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrForbidden(fmt.Errorf("empty token cannot request authorization")), log.WithFields(log.Fields{
+				"stack": "HndlUserAuth",
+			}))
+			return
+		} else {
+			err := uc.Authorize(tok) // user fields would be empty per say since its only the token you are authorizing
+			if err != nil {
+				httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+					"stack": "HndlUserAuth",
+				}))
+				return
+			}
+			c.AbortWithStatus(http.StatusOK)
+		}
 	}
 }

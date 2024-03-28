@@ -37,7 +37,14 @@ var (
 	ErrResourceNotFound = func(e error) HttpErr {
 		return (&ResNotFound{}).SetInternal(e)
 	}
+	ErrForbidden = func(e error) HttpErr {
+		return (&eForbidden{}).SetInternal(e)
+	}
 )
+
+type eForbidden struct {
+	Internal error
+}
 
 type eUsrAuth struct {
 	Internal error
@@ -69,6 +76,10 @@ type ResNotFound struct {
 	Internal error
 }
 
+func (eu *eForbidden) ClientErrData() string {
+	return "You are unauthorized to access this data on the website. Either you have no elevation or you require to re-login"
+}
+
 func (rnf *ResNotFound) ClientErrData() string {
 	return "Resource you were looking for is not found, check and send again"
 }
@@ -96,6 +107,10 @@ func (esr *eSendRabbit) ClientErrData() string {
 }
 func (egc *eGtwyConn) ClientErrData() string {
 	return "One or more gateways for the server is down/forbidden/closed, report this to a sysadmin to get it fixed"
+}
+
+func (eu *eForbidden) Error() string {
+	return eu.Internal.Error()
 }
 
 func (rnf *ResNotFound) Error() string {
@@ -127,6 +142,14 @@ func (esr *eSendRabbit) Error() string {
 
 func (egc *eGtwyConn) Error() string {
 	return egc.Internal.Error()
+}
+
+func (eu *eForbidden) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	eu.Internal = ie
+	return eu
 }
 
 func (rnf *ResNotFound) SetInternal(ie error) HttpErr {
@@ -197,6 +220,13 @@ func (eb *eBinding) SetInternal(ie error) HttpErr {
 	return eb
 }
 
+func (eu *eForbidden) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": eu.Internal,
+	}).Error("unauthorized token")
+	return eu
+}
+
 func (rnf *ResNotFound) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": rnf.Internal,
@@ -258,6 +288,13 @@ func (eb *eBinding) Log(le *log.Entry) HttpErr {
 		"internal_err": eb.Internal,
 	}).Error("one or more field validations failed")
 	return eb
+}
+
+func (eu *eForbidden) HttpStatusCode() int {
+	// https://stackoverflow.com/questions/3297048/403-forbidden-vs-401-unauthorized-http-responses
+	// 401 eForbidden is actually Unauthenticated and should be used when logging in
+	// While 403 is Forbidden and used once the token is generated.
+	return http.StatusForbidden
 }
 
 func (rnf *ResNotFound) HttpStatusCode() int {

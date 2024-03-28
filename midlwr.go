@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/eensymachines-in/patio-web/auth"
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,29 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+func Authorize(c *gin.Context) {
+	val, _ := c.Get("mongo-client")
+	mongoClient := val.(*mongo.Client)
+	uc := auth.UsersCollection{DbColl: mongoClient.Database("aquaponics").Collection("users")}
+
+	tok := c.Request.Header.Get("Authorization")
+	if tok == "" {
+		httperr.HttpErrOrOkDispatch(c, httperr.ErrForbidden(fmt.Errorf("empty token, cannot authorize")), log.WithFields(log.Fields{
+			"stack": "HndlUserAuth",
+		}))
+		return
+	} else {
+		err := uc.Authorize(tok) // user fields would be empty per say since its only the token you are authorizing
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUserAuth",
+			}))
+			return
+		}
+		c.Next() // request is authorized
+	}
+}
 
 // RabbitConnectWithChn : name of the channel this publishes to, via default exchange
 func RabbitConnectWithChn(name string) gin.HandlerFunc {
