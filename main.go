@@ -95,15 +95,26 @@ func main() {
 	api.Use(CORS).Use(MongoConnect)
 	// TODO:  test this api
 	api.POST("/login", HndlUserAuth)
-	api.GET("/authorize", HndlUserAuth) 
+	api.GET("/authorize", HndlUserAuth)
+
+	api.GET("/users/:id/devices", HndlUserDevices) // gets the list of devices that the user has acess to
+	// api.PATCH("/users/:id/devices", HndlUserDevices) // lets you slap on some users to devices
+
 	api.POST("/users", HndlUsers)
 	api.DELETE("/users/:email", HndlUsers) // single account delete
-	api.PATCH("/users/:email", HndlUsers)  // single account delete
+
+	api.PATCH("/users/:email", HndlUsers) // single account delete
+	// api.PUT("/users/:uid/devices", HndlUserDevices)
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")
-	devices.GET("/:uid/config", HndlDeviceConfig)                                                // getting existing device configuration on server
-	devices.PUT("/:uid/config", RabbitConnectWithChn(os.Getenv("AMQP_QNAME")), HndlDeviceConfig) // updating device configuration on server
+
+	devices.GET("/:uid/config", HndlDeviceConfig)                                                  // getting existing device configuration on server
+	devices.PATCH("/:uid/config", RabbitConnectWithChn(os.Getenv("AMQP_QNAME")), HndlDeviceConfig) // updating device configuration on server
+	devices.PATCH("/:uid/users", HndlUserDevices)                                                  // updating device configuration on server
+	devices.GET("/:uid", HndlDevices)
+	devices.DELETE("/:uid", HndlDevices)
+	devices.POST("/", HndlDevices)
 
 	log.Fatal(r.Run(":8080"))
 }

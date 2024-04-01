@@ -36,8 +36,27 @@ content-type: application/json
 ### simple authorize request, sends the token to get an http status code
 
 GET http://localhost:8081/api/authorize
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTE2MzM1NjEsImlzcyI6InBhdGlvLXdlYiBzZXJ2ZXIiLCJzdWIiOiJVc2VyIGF1dGhvcml6YXRpb24gcmVxdWVzdCIsInVzZXIiOiJrbmVlcnVuanVuQGdtYWlsLmNvbSIsInVzZXItcm9sZSI6MH0.FxqfR331ZlaOT3NMnK95iDXS9EgT_iZYKWm-_zlreOk
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTE2NzM3NTYsImlzcyI6InBhdGlvLXdlYiBzZXJ2ZXIiLCJzdWIiOiJVc2VyIGF1dGhvcml6YXRpb24gcmVxdWVzdCIsInVzZXIiOiJrbmVlcnVuanVuQGdtYWlsLmNvbSIsInVzZXItcm9sZSI6MH0.LL4sI9THBCy8GBp-GIouOqtpFlvLVfyT24KQsfuv270
 
 ### Deleting the user account
 
 DELETE   http://localhost:8081/api/users/kneerunjun@gmail.com
+
+
+### getting one device information 
+
+GET http://localhost:8081/api/devices/45-36-17-E3-1C-71
+
+### deleting the existing device
+DELETE http://localhost:8081/api/devices/45-36-17-E3-1C-71
+
+### adding a new device to the database 
+POST http://localhost:8081/api/devices/
+content-type: application/json
+
+{
+    "mac":"45-36-17-E3-1C-71",
+    "make": "raspberry pi 0w 512 MB",
+    "name": "Pump control, saidham",
+    "users": ["kneerunjun@gmail.com"]
+}

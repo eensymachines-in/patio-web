@@ -40,7 +40,21 @@ var (
 	ErrForbidden = func(e error) HttpErr {
 		return (&eForbidden{}).SetInternal(e)
 	}
+	DuplicateResourceErr = func(e error) HttpErr {
+		return (&eDuplicate{})
+	}
+	ErrInvalidParam = func(e error) HttpErr {
+		return (&eInvldParam{})
+	}
 )
+
+type eInvldParam struct {
+	Internal error
+}
+
+type eDuplicate struct {
+	Internal error
+}
 
 type eForbidden struct {
 	Internal error
@@ -76,6 +90,14 @@ type ResNotFound struct {
 	Internal error
 }
 
+func (eip *eInvldParam) ClientErrData() string {
+	return "One or more parameters for your request was invalid, check and send again"
+}
+
+func (edup *eDuplicate) ClientErrData() string {
+	return "Duplicate resource isnt allowed, check if you have already registered the resource before"
+}
+
 func (eu *eForbidden) ClientErrData() string {
 	return "You are unauthorized to access this data on the website. Either you have no elevation or you require to re-login"
 }
@@ -107,6 +129,14 @@ func (esr *eSendRabbit) ClientErrData() string {
 }
 func (egc *eGtwyConn) ClientErrData() string {
 	return "One or more gateways for the server is down/forbidden/closed, report this to a sysadmin to get it fixed"
+}
+
+func (eip *eInvldParam) Error() string {
+	return eip.Internal.Error()
+}
+
+func (edup *eDuplicate) Error() string {
+	return edup.Internal.Error()
 }
 
 func (eu *eForbidden) Error() string {
@@ -142,6 +172,22 @@ func (esr *eSendRabbit) Error() string {
 
 func (egc *eGtwyConn) Error() string {
 	return egc.Internal.Error()
+}
+
+func (eip *eInvldParam) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	eip.Internal = ie
+	return eip
+}
+
+func (edup *eDuplicate) SetInternal(ie error) HttpErr {
+	if ie == nil {
+		return nil
+	}
+	edup.Internal = ie
+	return edup
 }
 
 func (eu *eForbidden) SetInternal(ie error) HttpErr {
@@ -220,6 +266,26 @@ func (eb *eBinding) SetInternal(ie error) HttpErr {
 	return eb
 }
 
+/* ========================
+Log implementation for each of the errors
+this helps to log errors on their way out dispatch
+Each error implements Log function to help interfacing functions to uniformly call Log function
+========================*/
+
+func (eip *eInvldParam) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": eip.Internal,
+	}).Error("unauthorized token")
+	return eip
+}
+
+func (edup *eDuplicate) Log(le *log.Entry) HttpErr {
+	le.WithFields(log.Fields{
+		"internal_err": edup.Internal,
+	}).Error("unauthorized token")
+	return edup
+}
+
 func (eu *eForbidden) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": eu.Internal,
@@ -290,13 +356,25 @@ func (eb *eBinding) Log(le *log.Entry) HttpErr {
 	return eb
 }
 
+/* ========================
+Status code embeddingiin the the context requires status code setting from within each error
+EAch error corresponds to a single http status code
+Interfacing functions use this to embedd sattus code in the gin.Conetext
+========================*/
+
+func (eip *eInvldParam) HttpStatusCode() int {
+	return http.StatusBadRequest
+}
+
+func (edup *eDuplicate) HttpStatusCode() int {
+	return http.StatusBadRequest
+}
 func (eu *eForbidden) HttpStatusCode() int {
 	// https://stackoverflow.com/questions/3297048/403-forbidden-vs-401-unauthorized-http-responses
 	// 401 eForbidden is actually Unauthenticated and should be used when logging in
 	// While 403 is Forbidden and used once the token is generated.
 	return http.StatusForbidden
 }
-
 func (rnf *ResNotFound) HttpStatusCode() int {
 	return http.StatusNotFound
 }
