@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"context"
@@ -85,26 +85,30 @@ func RabbitConnectWithChn(name string) gin.HandlerFunc {
 }
 
 // MongoConnect : will connect to a mongo database and insert the connection to downstream handlers
-func MongoConnect(c *gin.Context) {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:27017", db_USER, db_PASSWD, db_SERVER)))
-	if err != nil {
-		httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
-			"stack":  "MongoConnect",
-			"login":  db_USER,
-			"server": db_SERVER,
-		}))
-		return
+
+func MongoConnect(server, user, passwd, dbname string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:27017", user, passwd, server)))
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
+				"stack":  "MongoConnect",
+				"login":  user,
+				"server": server,
+			}))
+			return
+		}
+		if client.Ping(ctx, readpref.Primary()) != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
+				"stack":  "MongoConnect",
+				"login":  user,
+				"server": server,
+			}))
+			return
+		}
+		c.Set("mongo-client", client)
+		c.Set("mongo-database", client.Database(dbname))
 	}
-	if client.Ping(ctx, readpref.Primary()) != nil {
-		httperr.HttpErrOrOkDispatch(c, httperr.ErrGatewayConnect(err), log.WithFields(log.Fields{
-			"stack":  "MongoConnect",
-			"login":  db_USER,
-			"server": db_SERVER,
-		}))
-		return
-	}
-	c.Set("mongo-client", client)
 }
 
 // CORS : this allows all cross origin requests

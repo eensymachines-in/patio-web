@@ -275,14 +275,14 @@ Each error implements Log function to help interfacing functions to uniformly ca
 func (eip *eInvldParam) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": eip.Internal,
-	}).Error("unauthorized token")
+	}).Error("invalid request parameter")
 	return eip
 }
 
 func (edup *eDuplicate) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": edup.Internal,
-	}).Error("unauthorized token")
+	}).Error("duplicate resource not allowed")
 	return edup
 }
 

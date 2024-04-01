@@ -1,4 +1,4 @@
-package main
+package handlers
 
 /* =========================
 project 		: ipatio-web
@@ -29,7 +29,9 @@ import (
 func HndlDevices(c *gin.Context) {
 	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
 	mongoClient := val.(*mongo.Client)
-	dc := devices.DevicesCollection{DbColl: mongoClient.Database("aquaponics").Collection("devices")}
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
 	defer mongoClient.Disconnect(context.Background())
 
 	if c.Request.Method == "POST" { // when the device on the ground seeks register itself
@@ -77,7 +79,9 @@ func HndlDevices(c *gin.Context) {
 func HndlUserDevices(c *gin.Context) {
 	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
 	mongoClient := val.(*mongo.Client)
-	dc := devices.DevicesCollection{DbColl: mongoClient.Database("aquaponics").Collection("devices")}
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
 	defer mongoClient.Disconnect(context.Background())
 
 	if c.Request.Method == "GET" {
@@ -100,7 +104,7 @@ func HndlUserDevices(c *gin.Context) {
 			}))
 			return
 		}
-		updated, err := devices.EitherMacIDOrObjID(c.Param("id"), dc.UpdateDevice(payload.UsersToAdd)) // for appending user email to the device datbase.
+		updated, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.UpdateDevice(payload.UsersToAdd)) // for appending user email to the device datbase.
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 				"stack": "HndlUserDevices/PATCH",
@@ -133,9 +137,11 @@ func HndlUsers(c *gin.Context) {
 		return
 	}
 	// Mongo connections
-	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
+	val, _ := c.Get("mongo-client")
 	mongoClient := val.(*mongo.Client)
-	uc := auth.UsersCollection{DbColl: mongoClient.Database("aquaponics").Collection("users")}
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	uc := auth.UsersCollection{DbColl: db.Collection("users")}
 	defer mongoClient.Disconnect(context.Background())
 
 	// Actual handler and response
@@ -189,7 +195,9 @@ func HndlUserAuth(c *gin.Context) {
 	// --------- mongo connections
 	val, _ := c.Get("mongo-client")
 	mongoClient := val.(*mongo.Client)
-	uc := auth.UsersCollection{DbColl: mongoClient.Database("aquaponics").Collection("users")}
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	uc := auth.UsersCollection{DbColl: db.Collection("users")}
 	defer mongoClient.Disconnect(context.Background())
 
 	// --------- request handling

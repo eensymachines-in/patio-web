@@ -22,6 +22,7 @@ services:
       - AMQP_SERVER=srv_rabbit
       - AMQP_LOGIN=eensyiot-admin:33n5y4dm1n
       - AMQP_QNAME=config-alerts
+      - MONGO_DB_NAME=${MONGODBNAME}
     secrets:
       - db_root_username
       - db_root_password
