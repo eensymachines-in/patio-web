@@ -14,108 +14,11 @@ import (
 	"net/http"
 
 	"github.com/eensymachines-in/patio-web/auth"
-	"github.com/eensymachines-in/patio-web/devices"
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-// HndlDevices : handling device / collection of devices  - devices when registered, unregistered, or simply queried for registrations
-// Devices store information of the platform and configuration of the actual devices on the ground.
-// incase of errors this dispatch as requried after having logged the error
-// Needs mongo connection to appropriate "devices" collection
-
-func HndlDevices(c *gin.Context) {
-	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
-	mongoClient := val.(*mongo.Client)
-	val, _ = c.Get("mongo-database")
-	db := val.(*mongo.Database)
-	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
-	defer mongoClient.Disconnect(context.Background())
-
-	if c.Request.Method == "POST" { // when the device on the ground seeks register itself
-		device := devices.Device{} // resultant device, or the device being inserted
-		if err := c.ShouldBind(&device); err != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(fmt.Errorf("failed to read device from payload")), log.WithFields(log.Fields{
-				"stack": "HndlDevices",
-			}))
-			return
-		}
-		err := dc.AddDevice(&device) // adds a new device to the registered device
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlDevices",
-			}))
-			return
-		}
-		c.AbortWithStatusJSON(http.StatusOK, device)
-	} else if c.Request.Method == "DELETE" { // device on the ground seeks to unregister itself
-		_, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.RemoveDevice)
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlDevices",
-			}))
-			return
-		}
-		c.AbortWithStatus(http.StatusOK)
-	} else if c.Request.Method == "GET" { // gets the device
-		devc, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.GetDevice) // typically when the device on the ground needs to check for its registration
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlDevices",
-			}))
-			return
-		}
-		c.AbortWithStatusJSON(http.StatusOK, devc)
-	}
-}
-
-// HndlUserDevices : Every devices has legal users, which are enlisted on device.Users
-// When logged in User would like to see all the devices under his control
-// then change the configuration or see the data accumlated.
-// Device when registering itself shall send the users, but incase some users need to be added ahead of the registration it would be using the patch method here
-// data on the server shall remain the only single source of truth
-func HndlUserDevices(c *gin.Context) {
-	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
-	mongoClient := val.(*mongo.Client)
-	val, _ = c.Get("mongo-database")
-	db := val.(*mongo.Database)
-	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
-	defer mongoClient.Disconnect(context.Background())
-
-	if c.Request.Method == "GET" {
-		devices, err := dc.UserDevices(c.Param("id")) // object id as string for the user
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlUserDevices",
-			}))
-			return
-		}
-		// we have received devices
-		c.AbortWithStatusJSON(http.StatusOK, devices)
-	} else if c.Request.Method == "PATCH" {
-		payload := struct {
-			UsersToAdd []string `json:"users"`
-		}{}
-		if err := c.ShouldBind(&payload); err != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
-				"stack": "HndlUserDevices/PATCH",
-			}))
-			return
-		}
-		updated, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.UpdateDevice(payload.UsersToAdd)) // for appending user email to the device datbase.
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-				"stack": "HndlUserDevices/PATCH",
-			}))
-			return
-		}
-		// we have received devices
-		c.AbortWithStatusJSON(http.StatusOK, updated)
-	}
-
-}
 
 // HndlUsers : Handle all routes that require User CRUD
 //

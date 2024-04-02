@@ -4,32 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/eensymachines-in/patio-web/httperr"
+	"github.com/eensymachines-in/patio/aquacfg"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
 )
 
-type MacID string // string alias for device mac ids - validation
-
-func (m MacID) IsValid() bool {
-	// https://stackoverflow.com/questions/4260467/what-is-a-regular-expression-for-a-mac-address
-	// delmiting character can be - or :
-	r := regexp.MustCompile(`^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$`)
-	return r.MatchString(string(m))
-}
-
-type Device struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Mac      MacID              `bson:"mac" json:"mac"`           // unique mac id of the device
-	Name     string             `bson:"name" json:"name"`         // device name, preferrably unique
-	Location string             `bson:"location" json:"location"` // google location co-oridinates
-	Make     string             `bson:"make" json:"make"`         // platform or make of device
-	Users    []string           `bson:"users" json:"users"`       // list of authorized users that have direct access to the devices
-}
+const (
+	QRY_TIMEOUT = 5 * time.Second
+)
 
 type DevicesCollection struct {
 	DbColl *mongo.Collection
@@ -103,7 +89,7 @@ func EitherMacIDOrObjID(macOrId string, queryFn func(flt bson.M, result *Device)
 // RemoveDevice : either send the mac or object id of the device to remove it permanently from the database
 // If you have any other filter you can apply else use EitherMacIDOrObjID
 func (dc *DevicesCollection) RemoveDevice(flt bson.M, result *Device) httperr.HttpErr {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), QRY_TIMEOUT)
 	_, err := dc.DbColl.DeleteOne(ctx, flt)
 	if err != nil {
 		return httperr.ErrDBQuery(err)
@@ -114,7 +100,7 @@ func (dc *DevicesCollection) RemoveDevice(flt bson.M, result *Device) httperr.Ht
 // GetDevice : gets the single device given the mac or the object id hex
 // If you have any other filter you can apply else use EitherMacIDOrObjID
 func (dc *DevicesCollection) GetDevice(flt bson.M, result *Device) httperr.HttpErr {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), QRY_TIMEOUT)
 	sr := dc.DbColl.FindOne(ctx, flt)
 	if sr.Err() != nil {
 		if errors.Is(sr.Err(), mongo.ErrNoDocuments) {
@@ -134,7 +120,7 @@ func (dc *DevicesCollection) GetDevice(flt bson.M, result *Device) httperr.HttpE
 // The new users slice to be updated is sent to a closure. In context of the users slice - slice of email of the user
 func (dc *DevicesCollection) UpdateDevice(newUsers []string) func(flt bson.M, result *Device) httperr.HttpErr {
 	return func(flt bson.M, result *Device) httperr.HttpErr {
-		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, _ := context.WithTimeout(context.Background(), QRY_TIMEOUT)
 		// AddToSet since we dont want duplicate user entries
 		// $each since we DO NOT want users as array being added to array, but each element in the result.Users array to be added one at a time
 		_, err := dc.DbColl.UpdateOne(ctx, flt, bson.M{"$addToSet": bson.M{"users": bson.M{"$each": newUsers}}})
@@ -142,5 +128,24 @@ func (dc *DevicesCollection) UpdateDevice(newUsers []string) func(flt bson.M, re
 			return httperr.ErrDBQuery(err)
 		}
 		return dc.GetDevice(flt, result) // getting the result for the updated device and repopulating the result
+	}
+}
+
+// UpdateDeviceCfg : updates the configuration for the device, and sends back the updated device status, error if any
+// It also sends out the configuration before updating as a back up configuration since incase downstream operations fail it shall be convenient to restore the configuration  to its original form
+// Example : after updating the configuration on the server if the amqp gateway fails, since the server is single source of truth the update on the server needs to be reverted
+func (dc *DevicesCollection) UpdateDeviceCfg(newCfg, backup *aquacfg.AppConfig) func(flt bson.M, result *Device) httperr.HttpErr {
+	return func(flt bson.M, result *Device) httperr.HttpErr {
+		ctx, _ := context.WithTimeout(context.Background(), QRY_TIMEOUT)
+		// getting the back up of the device
+		dc.GetDevice(flt, result)
+		*backup = result.Config
+		// Updating the  device for the new configuration
+		_, err := dc.DbColl.UpdateOne(ctx, flt, bson.M{"$set": bson.M{"config": newCfg}})
+		if err != nil {
+			return httperr.ErrDBQuery(err)
+		}
+		// sending back the device object updated
+		return dc.GetDevice(flt, result)
 	}
 }

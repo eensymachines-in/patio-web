@@ -12,15 +12,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/eensymachines-in/patio-web/devices"
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/eensymachines-in/patio/aquacfg"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // validateDeviceSched : for all schedule configurations that are incoming it needs a check before its saved on the database
@@ -80,50 +79,124 @@ func publishToRabbit(c *gin.Context, exchng string, byt []byte) error {
 	return nil
 }
 
-func HndlDeviceConfig(c *gin.Context) {
-	val, exists := c.Get("mongo-client")
-	if !exists {
-		httperr.HttpErrOrOkDispatch(c, httperr.ErrContxParamMissing(fmt.Errorf("missing mongo-client")), log.WithFields(log.Fields{
-			"stack": "HndlDeviceConfig",
-		}))
-		return
+// HndlUserDevices : Every devices has legal users, which are enlisted on device.Users
+// When logged in User would like to see all the devices under his control
+// then change the configuration or see the data accumlated.
+// Device when registering itself shall send the users, but incase some users need to be added ahead of the registration it would be using the patch method here
+// data on the server shall remain the only single source of truth
+func HndlUserDevices(c *gin.Context) {
+	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
+	mongoClient := val.(*mongo.Client)
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
+	defer mongoClient.Disconnect(context.Background())
+
+	if c.Request.Method == "GET" {
+		devices, err := dc.UserDevices(c.Param("id")) // object id as string for the user
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUserDevices",
+			}))
+			return
+		}
+		// we have received devices
+		c.AbortWithStatusJSON(http.StatusOK, devices)
+	} else if c.Request.Method == "PATCH" {
+		payload := struct {
+			UsersToAdd []string `json:"users"`
+		}{}
+		if err := c.ShouldBind(&payload); err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
+				"stack": "HndlUserDevices/PATCH",
+			}))
+			return
+		}
+		updated, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.UpdateDevice(payload.UsersToAdd)) // for appending user email to the device datbase.
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUserDevices/PATCH",
+			}))
+			return
+		}
+		// we have received devices
+		c.AbortWithStatusJSON(http.StatusOK, updated)
 	}
-	/* Database connections*/
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, _ := val.(*mongo.Client)
-	defer client.Disconnect(ctx)
-	db := client.Database("devices")
-	configs := db.Collection("configs")
 
-	// Getting the device uid
-	uid := c.Param("uid")
-	// uid = testDeviceUid // TODO: remove this line to bypass hardcoding
+}
 
-	if c.Request.Method == "GET" { //getting the device configuration from the server
-		// TODO:  replace testDeviceUID from the url params as the actula device uid
-		res := configs.FindOne(ctx, bson.M{"uid": uid}) // getting device by its uniq id, generally the mac id
-		if res.Err() != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(res.Err()), log.WithFields(log.Fields{
-				"stack": "HndlDeviceConfig/GET",
-				"uid":   uid,
+// HndlDevices : handling device / collection of devices  - devices when registered, unregistered, or simply queried for registrations
+// Devices store information of the platform and configuration of the actual devices on the ground.
+// incase of errors this dispatch as requried after having logged the error
+// Needs mongo connection to appropriate "devices" collection
+
+func HndlDevices(c *gin.Context) {
+	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
+	mongoClient := val.(*mongo.Client)
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
+	defer mongoClient.Disconnect(context.Background())
+
+	if c.Request.Method == "POST" { // when the device on the ground seeks register itself
+		device := devices.Device{} // resultant device, or the device being inserted
+		if err := c.ShouldBind(&device); err != nil {
+			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(fmt.Errorf("failed to read device from payload")), log.WithFields(log.Fields{
+				"stack": "HndlDevices",
 			}))
 			return
 		}
-		ac := aquacfg.AppConfig{}
-		err := res.Decode(&ac.Schedule)
+		err := dc.AddDevice(&device) // adds a new device to the registered device
 		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrUnMarshal(err), log.WithFields(log.Fields{
-				"stack":    "HndlDeviceConfig/GET",
-				"schedule": fmt.Sprintf("%v", ac.Schedule),
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlDevices",
 			}))
 			return
 		}
-		c.JSON(http.StatusOK, &ac.Schedule)
-		return
-	} else if c.Request.Method == "PUT" { // webapp woudl want to change the device configuration
-		ac := aquacfg.AppConfig{}
-		err := c.ShouldBind(&ac.Schedule)
+		c.AbortWithStatusJSON(http.StatusOK, device)
+	} else if c.Request.Method == "DELETE" { // device on the ground seeks to unregister itself
+		_, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.RemoveDevice)
 		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlDevices",
+			}))
+			return
+		}
+		c.AbortWithStatus(http.StatusOK)
+	} else if c.Request.Method == "GET" { // gets the device
+		devc, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.GetDevice) // typically when the device on the ground needs to check for its registration
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlDevices",
+			}))
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusOK, devc)
+	}
+}
+
+// HndlDeviceConfig : getting and patching the device configurations
+// While the front end shall GET request the device configuration, the once the user submits the configuration PATCHed configuration then shall be communicated to the device over AMQP rabbit
+func HndlDeviceConfig(c *gin.Context) {
+	val, _ := c.Get("mongo-client") // unless you havent got MongoConnect inline middleware this will not require error handling
+	mongoClient := val.(*mongo.Client)
+	val, _ = c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
+	defer mongoClient.Disconnect(context.Background())
+
+	if c.Request.Method == "GET" {
+		devc, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.GetDevice) // typically when the device on the ground needs to check for its registration
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlDevices",
+			}))
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusOK, devc.Config)
+	} else if c.Request.Method == "PATCH" {
+		ac := aquacfg.AppConfig{}
+		if err := c.ShouldBind(&ac.Schedule); err != nil {
 			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(err), log.WithFields(log.Fields{
 				"stack":    "HndlDeviceConfig/PUT",
 				"schedule": fmt.Sprintf("%v", ac.Schedule),
@@ -137,28 +210,17 @@ func HndlDeviceConfig(c *gin.Context) {
 			}))
 			return
 		}
-		// Incase the database update succeeds but messageq exchange isnt reachable that would put server out of sync from the device below
-		// And since the messageq hasnt received the message there is no way for the device to pull up the message
+		// Updating the device of its schedule  ..
 		backup := aquacfg.AppConfig{}
-		err = configs.FindOne(ctx, bson.M{"uid": uid}).Decode(&backup.Schedule) // getting the backup of configuration incase mq does fails.
+		devc, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.UpdateDeviceCfg(&ac, &backup))
 		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(err), log.WithFields(log.Fields{
-				"stack": "HndlDeviceConfig/PUT",
-				"uid":   uid,
-			}))
-			return
-		}
-
-		_, err = configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": ac.Schedule})
-		if err != nil {
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(err), log.WithFields(log.Fields{
-				"stack": "HndlDeviceConfig/PUT",
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlDevices",
 			}))
 			return
 		}
 		byt, _ := json.Marshal(ac.Schedule)
-		// Getting the rabbitmq connection so as to set up flushing of it before handler exits
-		val, exists = c.Get("rabbit-conn")
+		val, exists := c.Get("rabbit-conn")
 		if !exists {
 			httperr.HttpErrOrOkDispatch(c, httperr.ErrContxParamMissing(fmt.Errorf("missing mongo-client")), log.WithFields(log.Fields{
 				"stack": "HndlDeviceConfig/PUT",
@@ -167,15 +229,20 @@ func HndlDeviceConfig(c *gin.Context) {
 		}
 		conn := val.(*amqp.Connection)
 		defer conn.Close()
-
+		// Pushing to rabbit mq over amqp for the device to get noticiations.
 		if err := publishToRabbit(c, "", byt); err != nil {
-			configs.UpdateOne(ctx, bson.M{"uid": uid}, bson.M{"$set": backup.Schedule}) // undoing the database changes
-			httperr.HttpErrOrOkDispatch(c, httperr.ErrSendRabbit(err), log.WithFields(log.Fields{
-				"stack": "HndlDeviceConfig/PUT",
-			}))
-			return
+			// case when the server was updated of the configuration but the device could not be contacted  ..
+			// in case we revert the changes on server to what it was .. so that source of truth stays the same
+			// AMQP and database update are atomic operation
+			_, err := devices.EitherMacIDOrObjID(c.Param("uid"), dc.UpdateDeviceCfg(&backup, &aquacfg.AppConfig{}))
+			if err != nil {
+				httperr.HttpErrOrOkDispatch(c, httperr.ErrDBQuery(fmt.Errorf("failure to revert server changes, this means the server is out of sync from the device permanently %s", err)), log.WithFields(log.Fields{
+					"stack": "HndlDeviceConfig/PUT",
+				}))
+				return
+			}
 		}
-		c.JSON(http.StatusOK, gin.H{})
+		c.AbortWithStatusJSON(http.StatusOK, devc.Config)
 		return
 	}
 }
