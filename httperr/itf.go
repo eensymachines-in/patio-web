@@ -12,6 +12,7 @@ type HttpErr interface {
 	ClientErrData() string        // error message dispatched to the client (web) typically used with AbortStatusWithJSON
 }
 
+// HttpErrOrOkDispatch: given the gin Context, error, and the logging fields this can call c.AbortStatusWithJson, attach appropriate http status code and log the error
 func HttpErrOrOkDispatch(c *gin.Context, err HttpErr, le *log.Entry) {
 	if err == nil {
 		return

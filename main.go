@@ -89,7 +89,10 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
-	r.GET("/settings", func(c *gin.Context) {
+	r.GET("/devices/:deviceID/config", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{})
+	})
+	r.GET("/users/:id/devices", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
 	api := r.Group("/api")
@@ -98,10 +101,10 @@ func main() {
 	api.GET("/authorize", handlers.HndlUserAuth)
 
 	users := api.Group("/users")
-	users.GET("/:id/devices", handlers.HndlUserDevices) // gets the list of devices that the user has acess to
-	users.POST("/", handlers.HndlUsers)                 // can create new users
-	users.DELETE("/:email", handlers.HndlUsers)         // single account delete
-	users.PATCH("/:email", handlers.HndlUsers)          // single account alter
+	users.GET("/:userid/devices", handlers.SingleUserOfID, handlers.HndlUserDevices) // gets the list of devices that the user has acess to
+	users.DELETE("/:userid", handlers.SingleUserOfID, handlers.HndlUsers)            // single account delete
+	users.PATCH("/:userid", handlers.SingleUserOfID, handlers.HndlUsers)             // single account alter
+	users.POST("/", handlers.HndlUsers)                                              // can create new users
 
 	// ------------ CRUD device configurations -------
 	devices := api.Group("/devices")

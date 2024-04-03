@@ -294,3 +294,20 @@ func (u *UsersCollection) DeleteUser(emailOrID string) httperr.HttpErr {
 	}
 	return nil
 }
+
+// FindUser : from the hex object id this shall get the user
+func (u *UsersCollection) FindUser(objIdHex string, result *User) httperr.HttpErr {
+	ctx, _ := context.WithCancel(context.Background())
+	oid, err := primitive.ObjectIDFromHex(objIdHex)
+	if err != nil {
+		return httperr.ErrInvalidParam(err)
+	}
+	sr := u.DbColl.FindOne(ctx, bson.M{"_id": oid})
+	if sr.Err() != nil {
+		return httperr.ErrDBQuery(sr.Err())
+	}
+	if err := sr.Decode(result); err != nil {
+		return httperr.ErrBinding(err)
+	}
+	return nil
+}

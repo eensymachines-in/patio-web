@@ -24,7 +24,7 @@ type DevicesCollection struct {
 func (dc *DevicesCollection) UserDevices(userID string) ([]Device, httperr.HttpErr) {
 	ctx, _ := context.WithCancel(context.Background())
 	result := []Device{}
-	cur, err := dc.DbColl.Find(ctx, bson.M{"users": bson.M{"$elemMatch": userID}})
+	cur, err := dc.DbColl.Find(ctx, bson.M{"users": bson.M{"$elemMatch": bson.M{"$eq": userID}}})
 	if err != nil {
 		return result, httperr.ErrDBQuery(err)
 	}

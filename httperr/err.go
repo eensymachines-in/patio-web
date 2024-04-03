@@ -1,3 +1,9 @@
+// Errors compatible with http handlers with logging, dispatch codes and client messaging
+//
+// Errors need to be translated to http status code appropriately.
+// They also detailed logging on the server so as to enable precise diagnostics.
+// While errors need to send out client messages that provide convincing messages for the status.
+// This package builds all of that into the errors, as a circumference of the existing error interface.
 package httperr
 
 import (
@@ -9,40 +15,54 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// Constructor functions that take in an internal error and send back the error over HttpErr interface.
+// NOTE: SetInternal will return nil incase the internal error is nil
 var (
+	// Http handler context parameter is missing
 	ErrContxParamMissing = func(e error) HttpErr {
 		return (&eCtxParamMissing{}).SetInternal(e)
 	}
+	// Error when unmarshalling, typically from Json
 	ErrUnMarshal = func(e error) HttpErr {
 		return (&eUnmarshal{}).SetInternal(e)
 	}
+	// DB query has failed, but not when empty result
 	ErrDBQuery = func(e error) HttpErr {
 		return (&eDBQuery{}).SetInternal(e)
 	}
+	// Validation of the inputs, arguments went wrong
 	ErrValidation = func(e error) HttpErr {
 		return (&eValidation{}).SetInternal(e)
 	}
+	// Context when bound, error - this is similar to unmarshaling except that its used only when used with ShouldBind()
 	ErrBinding = func(e error) HttpErr {
 		return (&eBinding{}).SetInternal(e)
 	}
+	// Error publishing message to AMQP server
 	ErrSendRabbit = func(e error) HttpErr {
 		return (&eSendRabbit{}).SetInternal(e)
 	}
+	// Error connecting to gateway - DB or AMQP
 	ErrGatewayConnect = func(e error) HttpErr {
 		return (&eGtwyConn{}).SetInternal(e)
 	}
+	// Login / authentication failed
 	ErrAuthentication = func(e error) HttpErr {
 		return (&eUsrAuth{}).SetInternal(e)
 	}
+	// Failed to get resource when queried
 	ErrResourceNotFound = func(e error) HttpErr {
-		return (&ResNotFound{}).SetInternal(e)
+		return (&eResNotFound{}).SetInternal(e)
 	}
+	// Invalid token, access revoked
 	ErrForbidden = func(e error) HttpErr {
 		return (&eForbidden{}).SetInternal(e)
 	}
+	// duplicate resource creation when disallowed
 	DuplicateResourceErr = func(e error) HttpErr {
 		return (&eDuplicate{})
 	}
+	// incoming request parameter is invalid
 	ErrInvalidParam = func(e error) HttpErr {
 		return (&eInvldParam{})
 	}
@@ -86,37 +106,37 @@ type eGtwyConn struct {
 	Internal error
 }
 
-type ResNotFound struct {
+type eResNotFound struct {
 	Internal error
 }
 
 func (eip *eInvldParam) ClientErrData() string {
-	return "One or more parameters for your request was invalid, check and send again"
+	return "One or more parameters for your request was invalid, check and send again."
 }
 
 func (edup *eDuplicate) ClientErrData() string {
-	return "Duplicate resource isnt allowed, check if you have already registered the resource before"
+	return "Duplicate resource isn't allowed, check if the resource is already registered."
 }
 
 func (eu *eForbidden) ClientErrData() string {
-	return "You are unauthorized to access this data on the website. Either you have no elevation or you require to re-login"
+	return "Unauthorized to access this data on the website. Either you have no elevation or you require to re-login."
 }
 
-func (rnf *ResNotFound) ClientErrData() string {
+func (rnf *eResNotFound) ClientErrData() string {
 	return "Resource you were looking for is not found, check and send again"
 }
 
 func (eua *eUsrAuth) ClientErrData() string {
-	return "You are unauthorized, check your password and try again"
+	return "Authentication failed, check your password and try again."
 }
 func (ecpm *eCtxParamMissing) ClientErrData() string {
-	return "One or more components of the server isnt working as it should be. Kindly contact the sys admin"
+	return "One or more components of the server isn't working as it should be. Kindly contact the system admin"
 }
 func (eu *eUnmarshal) ClientErrData() string {
 	return "Error reading in the data sent, check your inputs and try again. If the problem persists then contact sys admin"
 }
 func (edbq *eDBQuery) ClientErrData() string {
-	return "Resource not found, this happens when one or more params indicate a resource that isnt registered. Check and send again"
+	return "Failed to fetch data, this happens when one or more components on the server isnt working as expected. Get in touch with a system admin."
 }
 func (ev *eValidation) ClientErrData() string {
 	return "One or more inputs in the request were invalidated by the server, check your inputs and send again"
@@ -125,10 +145,10 @@ func (eb *eBinding) ClientErrData() string {
 	return "Request payload wasnt as expected, check your inputs and send again"
 }
 func (esr *eSendRabbit) ClientErrData() string {
-	return "We couldnt communicate the changes to the device. Server would not attempt to send this again"
+	return "Couldn't dispatch the changes downstream. One or more gateways rejected, the server will not attempt this again."
 }
 func (egc *eGtwyConn) ClientErrData() string {
-	return "One or more gateways for the server is down/forbidden/closed, report this to a sysadmin to get it fixed"
+	return "One or more gateways for the server is down/forbidden/closed, server will not attempt to send this again."
 }
 
 func (eip *eInvldParam) Error() string {
@@ -143,7 +163,7 @@ func (eu *eForbidden) Error() string {
 	return eu.Internal.Error()
 }
 
-func (rnf *ResNotFound) Error() string {
+func (rnf *eResNotFound) Error() string {
 	return rnf.Internal.Error()
 }
 
@@ -198,7 +218,7 @@ func (eu *eForbidden) SetInternal(ie error) HttpErr {
 	return eu
 }
 
-func (rnf *ResNotFound) SetInternal(ie error) HttpErr {
+func (rnf *eResNotFound) SetInternal(ie error) HttpErr {
 	if ie == nil {
 		return nil
 	}
@@ -282,7 +302,7 @@ func (eip *eInvldParam) Log(le *log.Entry) HttpErr {
 func (edup *eDuplicate) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": edup.Internal,
-	}).Error("duplicate resource not allowed")
+	}).Error("duplicate resource")
 	return edup
 }
 
@@ -293,10 +313,10 @@ func (eu *eForbidden) Log(le *log.Entry) HttpErr {
 	return eu
 }
 
-func (rnf *ResNotFound) Log(le *log.Entry) HttpErr {
+func (rnf *eResNotFound) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": rnf.Internal,
-	}).Error("resource now found..")
+	}).Error("resource now found")
 	return rnf
 }
 
@@ -310,25 +330,25 @@ func (eua *eUsrAuth) Log(le *log.Entry) HttpErr {
 func (egc *eGtwyConn) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": egc.Internal,
-	}).Error("failed connection to gateway")
+	}).Error("failed gateway connection")
 	return egc
 }
 func (esr *eSendRabbit) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": esr.Internal,
-	}).Error("failed sending message to rabbitmq")
+	}).Error("failed sending to rabbitmq")
 	return esr
 }
 func (ecpm *eCtxParamMissing) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": ecpm.Internal,
-	}).Error("One or more context params is missing, check the handlers the sequence of middleware")
+	}).Error("one or more context params in the handler missing")
 	return ecpm
 }
 func (eu *eUnmarshal) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": eu.Internal,
-	}).Error("failed unmarshalling error")
+	}).Error("failed unmarshalling")
 	return eu
 }
 func (edbq *eDBQuery) Log(le *log.Entry) HttpErr {
@@ -352,7 +372,7 @@ func (ev *eValidation) Log(le *log.Entry) HttpErr {
 func (eb *eBinding) Log(le *log.Entry) HttpErr {
 	le.WithFields(log.Fields{
 		"internal_err": eb.Internal,
-	}).Error("one or more field validations failed")
+	}).Error("json binding failed")
 	return eb
 }
 
@@ -375,7 +395,7 @@ func (eu *eForbidden) HttpStatusCode() int {
 	// While 403 is Forbidden and used once the token is generated.
 	return http.StatusForbidden
 }
-func (rnf *ResNotFound) HttpStatusCode() int {
+func (rnf *eResNotFound) HttpStatusCode() int {
 	return http.StatusNotFound
 }
 

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/eensymachines-in/patio-web/auth"
 	"github.com/eensymachines-in/patio-web/devices"
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/eensymachines-in/patio/aquacfg"
@@ -91,9 +92,14 @@ func HndlUserDevices(c *gin.Context) {
 	db := val.(*mongo.Database)
 	dc := devices.DevicesCollection{DbColl: db.Collection("devices")}
 	defer mongoClient.Disconnect(context.Background())
+	// From SingleUserOfID - the user object from the object id is derived and injected in the context
+	// user object then can be accessed for its fields
+	// example: device to user mapping is always thru email, since user object in the database can be transient but if after deletion the user chooses the same email address then it would automatically connect thee user and the device
+	val, _ = c.Get("user")
+	user := val.(auth.User)
 
 	if c.Request.Method == "GET" {
-		devices, err := dc.UserDevices(c.Param("id")) // object id as string for the user
+		devices, err := dc.UserDevices(user.Email) // object id as string for the user
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 				"stack": "HndlUserDevices",

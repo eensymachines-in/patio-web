@@ -10,16 +10,20 @@ Content-Type: application/json
     "name": "Niranjan Awati"
 }
 
+### getting the simple user 
+
+GET http://localhost:8081/api/users/660c16120d43bcdefc220491/devices
+
+
 ### Simple patch requesst for the existing user
 
-PATCH  http://localhost:8081/api/users/6604ade011e8c491e94eb022
+PATCH  http://localhost:8081/api/users/660c16120d43bcdefc220491
 content-type: application/json
 
 {
-    "email": "kneerunjun@gmail.com",
     "auth": "jenc%41993",
     "name": "Niranjan Vijay Awati",
-    "telegid":645645699
+    "telegid":645645700
 }
 
 
@@ -30,17 +34,17 @@ content-type: application/json
 
 {
     "email": "kneerunjun@gmail.com",
-    "auth": "jun%41993"
+    "auth": "jenc%41993"
 }
 
 ### simple authorize request, sends the token to get an http status code
 
 GET http://localhost:8081/api/authorize
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTIwMDE1MzAsImlzcyI6InBhdGlvLXdlYiBzZXJ2ZXIiLCJzdWIiOiJVc2VyIGF1dGhvcml6YXRpb24gcmVxdWVzdCIsInVzZXIiOiJrbmVlcnVuanVuQGdtYWlsLmNvbSIsInVzZXItcm9sZSI6MH0.1y4Jh7OC-YCivaxYXeEPdbTNbdAB6LiiHkHiBjQWoRE
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTIwNjg2ODAsImlzcyI6InBhdGlvLXdlYiBzZXJ2ZXIiLCJzdWIiOiJVc2VyIGF1dGhvcml6YXRpb24gcmVxdWVzdCIsInVzZXIiOiJrbmVlcnVuanVuQGdtYWlsLmNvbSIsInVzZXItcm9sZSI6MH0.CJR0QXSU3bG9ub-lLSOQgmWCFNiMApmmVINaKmFGqfU
 
 ### Deleting the user account
 
-DELETE   http://localhost:8081/api/users/kneerunjun@gmail.com
+DELETE   http://localhost:8081/api/users/66060f681e510aa3f011857a
 
 
 ### getting one device information 
@@ -83,3 +87,5 @@ content-type: application/json
     "interval": 100,
     "pulsegap":120
 }
+
+

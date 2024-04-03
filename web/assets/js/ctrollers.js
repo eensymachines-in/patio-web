@@ -37,7 +37,7 @@
                     $window.localStorage.setItem("user-role", response.data.role);
                     $window.localStorage.setItem("user-telegid", response.data.telegid);
                     $window.localStorage.setItem("user-authtok", response.data.authtok);
-                    $location.url("/settings") // logging in to the settings page 
+                    $location.url("/users/"+response.data.id+"/devices") // device listing page where user can select the devices under his control
                 }, function (response) {
                     if (response.status == 401) {
                         // when the credentials dont match or credentials dont exists 

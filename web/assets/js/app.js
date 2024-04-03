@@ -11,8 +11,10 @@
         $routeProvider
             .when("/", {
                 templateUrl: "/assets/views/splash.html"
-            }).when("/settings", {
+            }).when("/devices/:deviceID/config", {
                 templateUrl: "/assets/views/settings.html"
+            }).when("/users/:userID/devices", {
+                templateUrl: "/assets/views/user_devices.html"
             });
 
         $provide.provider("emailPattern", function() {

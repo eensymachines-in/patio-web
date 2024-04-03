@@ -32,4 +32,47 @@
             }
         }
     })
+    .directive("userDevices", function(){
+        return {
+            restrict: "EA",
+            scope :{},
+            templateUrl: "/assets/templates/user-devices.html",
+            controller:  function($scope,$window,$http){
+                // user id needs to be extracted from the url 
+                // userid = $window.localStorage.getItem("user-id");
+                // getting the user devices 
+                $scope.devices = [
+                    {name:"No devices found!", make:"Unfortunately we haven't found any devices that you control. One or more devices when deployed will have your email as owners"}
+                ];
+                // retreiving user information from local storage 
+                // this is required to display the username on the legend
+                // also user id is used to form the devices url 
+                completeName = $window.localStorage.getItem("user-name");
+                if (completeName == "") {
+                    $scope.legendTxt = "List of devices"
+                } else {
+                    names = completeName.split(" ")
+                    if (names.length >1) {
+                        $scope.legendTxt = names[0]+'\'s devices';
+                    } else {
+                        $scope.legendTxt = names+'\'s devices';
+                    }
+                }
+                $http ({
+                    method:'get',
+                    url: '/api/users/'+ $window.localStorage.getItem("user-id") + '/devices',
+                }).then(function(response){
+                    console.log("received data for user devices");
+                    // what we receive is an [] of dedvice objects
+                    console.log(response.data);
+                    $scope.devices  = response.data;
+                    $scope.devices.forEach(x => {
+                        x.link = {};
+                    })
+                }, function(response){
+                    console.log("error getting the user devices");
+                })
+            }
+        }
+    })
 })()

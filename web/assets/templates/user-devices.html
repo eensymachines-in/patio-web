@@ -1,0 +1,13 @@
+<legend class="text-center">
+    <h3>{[legendTxt]}</h3>
+</legend>
+<hr>
+<div class="card" ng-repeat="d in devices">
+    <div class="card-body">
+        <h4 class="card-title">{[d.name]}</h4>
+        <h6 class="card-subtitle mb-2 text-muted">{[d.mac]}</h6>
+        <p class="card-text">{[d.make]}</p>
+        <a ng-show="d.link" href="/devices/{[d.id]}" class="card-link">Edit device</a>
+        <a ng-show="d.link" href="/devices/{[d.id]}/config" class="card-link">Configure device</a>
+    </div>
+</div>

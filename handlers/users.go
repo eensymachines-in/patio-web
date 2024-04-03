@@ -31,14 +31,7 @@ import (
 // GET requires only email
 func HndlUsers(c *gin.Context) {
 	// Bindings ..
-	usr := auth.User{}
-	err := httperr.ErrBinding(c.ShouldBind(&usr))
-	if err != nil {
-		httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
-			"stack": "HndlUsers",
-		})) // binding failed -
-		return
-	}
+
 	// Mongo connections
 	val, _ := c.Get("mongo-client")
 	mongoClient := val.(*mongo.Client)
@@ -49,7 +42,16 @@ func HndlUsers(c *gin.Context) {
 
 	// Actual handler and response
 	if c.Request.Method == "POST" { // login requests are posts requests
-		err := uc.NewUser(&usr)
+		usr := auth.User{}
+		err := httperr.ErrBinding(c.ShouldBind(&usr))
+		if err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUsers",
+			})) // binding failed -
+			return
+		}
+		usr.Role = auth.EndUser // when creating new user the role will always be EndUser
+		err = uc.NewUser(&usr)
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 				"stack": "HndlUsers",
@@ -58,7 +60,11 @@ func HndlUsers(c *gin.Context) {
 		}
 		c.AbortWithStatusJSON(http.StatusOK, &usr)
 	} else if c.Request.Method == "DELETE" {
-		err := uc.DeleteUser(c.Param("email"))
+		// for deleting the user email is required, but emails in urls arent a great idea
+		// Hence we get the user which is injected by SingleUserOfID
+		val, _ := c.Get("user")
+		usr := val.(auth.User)
+		err := uc.DeleteUser(usr.Email)
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 				"stack": "HndlUsers",
@@ -67,9 +73,22 @@ func HndlUsers(c *gin.Context) {
 		}
 		c.AbortWithStatus(http.StatusOK)
 	} else if c.Request.Method == "PATCH" {
-		// the identifier shall be used from the url param and not from the payload body
-		// identifier from url can be email or id hex  - EditUser has to figure it out
-		err := uc.EditUser(c.Param("email"), usr.Name, usr.Auth, usr.TelegID)
+		// EditUser takes emails, while email as user identifier in urls isnt a good idea
+		// We thus use SingleUserOfID middleware that can get the user object as required
+		val, _ := c.Get("user")
+		usr := val.(auth.User)
+		patch := struct {
+			Name    string `json:"name"`
+			Auth    string `json:"auth"`
+			TelegID int64  `json:"telegid"`
+		}{}
+		if err := httperr.ErrBinding(c.ShouldBind(&patch)); err != nil {
+			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+				"stack": "HndlUsers",
+			}))
+			return
+		}
+		err := uc.EditUser(usr.Email, patch.Name, patch.Auth, patch.TelegID)
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
 				"stack": "HndlUsers",

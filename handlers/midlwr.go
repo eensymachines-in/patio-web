@@ -17,6 +17,29 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// SingleUserOfID : from :userid will hit the database with users and get the user object, if not found send back a response from here
+// Do not use this as the last handler in the chain of handlers since this does not close the database connections
+// Use only after MongoConnect middleware since this uses the mongo connection
+func SingleUserOfID(c *gin.Context) {
+	// val, _ := c.Get("mongo-client")
+	// mongoClient := val.(*mongo.Client)
+	// No use for client, uses the database directly
+	val, _ := c.Get("mongo-database")
+	db := val.(*mongo.Database)
+	uc := auth.UsersCollection{DbColl: db.Collection("users")}
+	user := auth.User{}
+	err := uc.FindUser(c.Param("userid"), &user)
+	if err != nil {
+		httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
+			"stack": "SingleUserOfID",
+		})) // binding failed -
+		return
+	}
+	// If user is found this shall set it in context and call next
+	c.Set("user", user)
+	c.Next()
+}
+
 func Authorize(c *gin.Context) {
 	val, _ := c.Get("mongo-client")
 	mongoClient := val.(*mongo.Client)
