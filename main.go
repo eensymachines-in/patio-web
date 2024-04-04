@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/eensymachines-in/patio-web/handlers"
+	"github.com/eensymachines-in/patio-web/seeding"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -75,6 +76,21 @@ func init() { // logging setup
 			"err": err,
 		}).Error("failed to load database credentials from secrets file")
 	} // loaded pw for database login
+
+	if val := os.Getenv("DB_SEED"); val == "force" || val == "ifempty" {
+		sdr, _ := seeding.MongoSeeder("./seeding/devices.json", db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
+		if val == "force" || (val == "ifempty" && sdr.DestinationEmpty()) {
+			count, err := sdr.Seed()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Error("failed seeding, application maybe running with no /partial data in the DB")
+			}
+			log.WithFields(log.Fields{
+				"count": count,
+			}).Info("done seeding")
+		}
+	}
 }
 
 func main() {

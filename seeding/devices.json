@@ -1,0 +1,162 @@
+[
+    {
+        "mac": "60-E5-98-25-BC-37",
+        "name": "Dahle",
+        "location": "10.2891838",
+        "make": "Carter and Sons",
+        "users":["kneerunjun@gmail.com","kcraft6@jalbum.net"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "17-79-87-AC-97-89",
+        "name": "Schmedeman",
+        "location": "33.6952452",
+        "make": "Cremin, Weissnat and Beatty",
+        "users":["lokie8@google.fr","kcraft6@jalbum.net"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "17-21-BF-A5-9D-01",
+        "name": "Browning",
+        "location": "-7.1508118",
+        "make": "Volkman, Sipes and Kiehn",
+        "users":["lokie8@google.fr"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "7A-A7-B7-BC-7C-89",
+        "name": "Golf Course",
+        "location": "-18.1112146",
+        "make": "McDermott, Schmeler and Heidenreich",
+        "users":["kneerunjun@gmail.com"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "67-3B-12-1B-D0-9B",
+        "name": "Ridge Oak",
+        "location": "40.324768",
+        "make": "Leuschke Inc",
+        "users":[],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "5F-54-98-75-72-65",
+        "name": "Lillian",
+        "location": "7.5273576",
+        "make": "Flatley Group",
+        "users":["soffner9@webs.com"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "C0-3D-A9-69-43-85",
+        "name": "Green Ridge",
+        "location": "30.378326",
+        "make": "Tromp Inc",
+        "users":["ejamme3@hexun.com"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "DD-84-F8-AD-F3-A8",
+        "name": "Ridgeview",
+        "location": "11.5825677",
+        "make": "Rath Inc",
+        "users":["kneerunjun@gmail.com","kcraft6@jalbum.net","ejamme3@hexun.com","gtester0@goodreads.com"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "F3-24-DB-B3-00-18",
+        "name": "Bluestem",
+        "location": "32.147679",
+        "make": "Koch Inc",
+        "users":["gtester0@goodreads.com"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    },
+    {
+        "mac": "51-ED-D6-B6-07-A8",
+        "name": "Steensland",
+        "location": "-8.0650276",
+        "make": "Langworth, Grady and Trantow",
+        "users":["vboylund2@hhs.gov"],
+        "config" : {
+            "appname" : "",
+            "schedule" : {
+                "config" : 3,
+                "tickat" : "14:10",
+                "pulsegap" : 120,
+                "interval" : 100
+            }
+        }
+    }
+]
