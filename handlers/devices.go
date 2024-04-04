@@ -199,7 +199,8 @@ func HndlDeviceConfig(c *gin.Context) {
 			}))
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusOK, devc.Config)
+		// NOTE: we send only the schedule of the device and not the entire configuration
+		c.AbortWithStatusJSON(http.StatusOK, devc.Config.Schedule)
 	} else if c.Request.Method == "PATCH" {
 		ac := aquacfg.AppConfig{}
 		if err := c.ShouldBind(&ac.Schedule); err != nil {

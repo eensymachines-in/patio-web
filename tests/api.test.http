@@ -76,6 +76,10 @@ content-type: application/json
 }
 
 
+### simple get schedule for a device 
+GET http://localhost:8081/api/devices/45-36-17-E3-1C-71/config
+
+
 ### simple patch of the schedule 
 
 PATCH  http://localhost:8081/api/devices/45-36-17-E3-1C-71/config

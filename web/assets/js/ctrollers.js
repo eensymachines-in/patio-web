@@ -36,6 +36,9 @@
                     $window.localStorage.setItem("user-name", response.data.name);
                     $window.localStorage.setItem("user-role", response.data.role);
                     $window.localStorage.setItem("user-telegid", response.data.telegid);
+                    // https://medium.com/kanlanc/heres-why-storing-jwt-in-local-storage-is-a-great-mistake-df01dad90f9e
+                    // BUG: look into the article and find out why storing tokens in localstorage isnt a good idea
+                    // For now we are just going ahead with the idea of having everything on localstorage 
                     $window.localStorage.setItem("user-authtok", response.data.authtok);
                     $location.url("/users/"+response.data.id+"/devices") // device listing page where user can select the devices under his control
                 }, function (response) {
@@ -57,7 +60,7 @@
             }
         }
     })
-        .controller("settingsCtrl", function ($scope, $http, $timeout, $route) {
+        .controller("settingsCtrl", function ($scope, $http, $timeout, $route, $routeParams) {
             $scope.hrOptions = [
                 "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12",
                 "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"
@@ -138,7 +141,7 @@
                 console.log($scope.settings);
                 $http({
                     method: 'put',
-                    url: '/api/devices/705b200f-059b-4630-bf3d-5d55c3a4a9dc/config',
+                    url: '/api/devices/' + $routeParams.deviceID +'/config',
                     data: $scope.settings,
                     headers: {
                         'Content-Type': "application/json"
@@ -156,7 +159,7 @@
             // Getting the current settings to start with 
             $http({
                 method: 'get',
-                url: '/api/devices/705b200f-059b-4630-bf3d-5d55c3a4a9dc/config',
+                url: '/api/devices/'+$routeParams.deviceID+'/config',
             }).then(function (response) {
                 console.log("received current settings from the server", response.data);
                 $scope.configOptions.forEach(e => {
