@@ -24,8 +24,17 @@ var (
 )
 
 func init() { // logging setup
-	log.SetFormatter(&log.TextFormatter{DisableColors: false, FullTimestamp: false})
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: false,
+		FullTimestamp: false,
+		PadLevelText:  true,
+	})
+	// log.SetFormatter(&log.JSONFormatter{
+
+	// })
 	log.SetReportCaller(false)
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel) // default is info level, if verbose then trace
 
 	val := os.Getenv("FLOG")
 	if val == "1" {
@@ -78,9 +87,28 @@ func init() { // logging setup
 	} // loaded pw for database login
 
 	if val := os.Getenv("DB_SEED"); val == "force" || val == "ifempty" {
-		sdr, _ := seeding.MongoSeeder("./seeding/devices.json", db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
+		log.WithFields(log.Fields{
+			"DB_SEED": val,
+		}).Info("Now seeding the database")
+		rdr, err := seeding.JsonSeedReader("./seeding/devices.json")
+		if err != nil {
+			// Is not able to read the reader file
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Panicf("failed to read seeding json file, aborting seeding")
+			return
+		}
+		sdr, _ := seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
 		if val == "force" || (val == "ifempty" && sdr.DestinationEmpty()) {
-			count, err := sdr.Seed()
+			if val == "force" {
+				// this clears of the database before adding any test data
+				// CAUTION:  not for production purposes, will flush databases for all existing data
+				if err := sdr.Flush(); err != nil {
+					log.Panicf("Error flushing the database in force setting, %s", err)
+					return
+				}
+			}
+			count, err := sdr.Seed(rdr)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"err": err,

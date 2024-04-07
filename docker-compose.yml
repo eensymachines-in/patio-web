@@ -30,6 +30,7 @@ services:
       - mongo_uri
     container_name: ctn_web 
     stdin_open: true
+    tty: true
     networks:
       - eensyaqp-nw
     depends_on:
@@ -72,6 +73,7 @@ services:
       - RABBITMQ_DEFAULT_USER=eensyiot-admin
       - RABBITMQ_DEFAULT_PASS=33n5y4dm1n
     stdin_open: true 
+    tty: true
     container_name: ctn_rabbit
     healthcheck:
       test: "exit 0"
