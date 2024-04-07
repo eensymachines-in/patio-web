@@ -62,9 +62,8 @@ func (ms *mongoSeeder) Seed(sr SeedReader) (int64, error) {
 	if ms.coll == nil {
 		return int64(0), fmt.Errorf("source / destination of the seeder are empty/nil, cannot proceed")
 	}
-	// devices := []devices.Device{}
-	readResult := []map[string]interface{}{}
-	err := sr.Read(&readResult)
+
+	readResult, err := sr.Read()
 	if err != nil {
 		return int64(0), err
 	}

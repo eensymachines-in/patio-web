@@ -29,9 +29,6 @@ func init() { // logging setup
 		FullTimestamp: false,
 		PadLevelText:  true,
 	})
-	// log.SetFormatter(&log.JSONFormatter{
-
-	// })
 	log.SetReportCaller(false)
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel) // default is info level, if verbose then trace

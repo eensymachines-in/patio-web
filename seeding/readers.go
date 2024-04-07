@@ -18,7 +18,7 @@ var (
 )
 
 type SeedReader interface {
-	Read(result *[]map[string]interface{}) error
+	Read() ([]map[string]interface{}, error)
 }
 
 type jsonSeedReader struct {
@@ -26,16 +26,18 @@ type jsonSeedReader struct {
 }
 
 // reads the json file to byt ready for unmarshalling
-func (jsr *jsonSeedReader) Read(result *[]map[string]interface{}) error {
+func (jsr *jsonSeedReader) Read() ([]map[string]interface{}, error) {
 	if jsr.jsonF == nil {
-		return fmt.Errorf("nil json, cannot read")
+		return nil, fmt.Errorf("nil json, cannot read")
 	}
 	byt, err := io.ReadAll(jsr.jsonF)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := json.Unmarshal(byt, result); err != nil {
-		return err
+	// data is owned by the writer
+	result := []map[string]interface{}{} // irrespective of the type of the data
+	if err := json.Unmarshal(byt, &result); err != nil {
+		return nil, err
 	}
-	return nil
+	return result, nil
 }
