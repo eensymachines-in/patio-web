@@ -16,9 +16,9 @@ services:
     volumes:
       - .:${SRCDIR}
     environment:
-      - FLOG=0
-      - SILENT=0
-      - GINMODE=DEBUG
+      - FLOG=${FLAG_FLOG}
+      - SILENT=${FLAG_SILENCE}
+      - GINMODE=${FLAG_GINMODE}
       - AMQP_SERVER=srv_rabbit
       - AMQP_LOGIN=eensyiot-admin:33n5y4dm1n
       - AMQP_QNAME=config-alerts

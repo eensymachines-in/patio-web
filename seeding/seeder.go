@@ -29,11 +29,16 @@ type Seeder interface {
 	DestinationEmpty() bool
 	Seed(sr SeedReader) (int64, error)
 	Flush() error
+	Close()
 }
 
 type mongoSeeder struct {
 	client *mongo.Client
 	coll   *mongo.Collection
+}
+
+func (ms *mongoSeeder) Close() {
+	ms.client.Disconnect(context.Background())
 }
 
 func (ms *mongoSeeder) DestinationEmpty() bool {
@@ -62,7 +67,6 @@ func (ms *mongoSeeder) Seed(sr SeedReader) (int64, error) {
 	if ms.coll == nil {
 		return int64(0), fmt.Errorf("source / destination of the seeder are empty/nil, cannot proceed")
 	}
-
 	readResult, err := sr.Read()
 	if err != nil {
 		return int64(0), err

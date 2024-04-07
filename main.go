@@ -83,39 +83,39 @@ func init() { // logging setup
 		}).Error("failed to load database credentials from secrets file")
 	} // loaded pw for database login
 
-	if val := os.Getenv("DB_SEED"); val == "force" || val == "ifempty" {
+	/* ===============
+	Getting the seed readers ready
+	Seed readers with underlying json files
+	==================*/
+
+	rdr, err := seeding.JsonSeedReader("./seeding/devices.json")
+	if err != nil {
 		log.WithFields(log.Fields{
-			"DB_SEED": val,
-		}).Info("Now seeding the database")
-		rdr, err := seeding.JsonSeedReader("./seeding/devices.json")
-		if err != nil {
-			// Is not able to read the reader file
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Panicf("failed to read seeding json file, aborting seeding")
-			return
-		}
-		sdr, _ := seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
-		if val == "force" || (val == "ifempty" && sdr.DestinationEmpty()) {
-			if val == "force" {
-				// this clears of the database before adding any test data
-				// CAUTION:  not for production purposes, will flush databases for all existing data
-				if err := sdr.Flush(); err != nil {
-					log.Panicf("Error flushing the database in force setting, %s", err)
-					return
-				}
-			}
-			count, err := sdr.Seed(rdr)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Error("failed seeding, application maybe running with no /partial data in the DB")
-			}
-			log.WithFields(log.Fields{
-				"count": count,
-			}).Info("done seeding")
-		}
+			"err": err,
+		}).Errorf("failed to read devices seeding json file, aborting seeding")
 	}
+	sdr, err := seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Errorf("error creating a new mongo seeder")
+	}
+	seeding.RunSeed(rdr, sdr)
+
+	rdr, err = seeding.JsonSeedReader("./seeding/users.json")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Errorf("failed to read devices seeding json file, aborting seeding")
+	}
+	sdr, err = seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "users")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Errorf("error creating a new mongo seeder")
+	}
+	seeding.RunSeed(rdr, sdr)
+
 }
 
 func main() {
