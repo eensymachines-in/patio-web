@@ -22,10 +22,10 @@ type SeedReader interface {
 }
 
 type jsonSeedReader struct {
-	jsonF *os.File
+	jsonF *os.File // file pointer to the input json file
 }
 
-// reads the json file to byt ready for unmarshalling
+// Read scans through a json file and picks up data to be unmarshalled to map[string]interface{}. Will error in case unable to read file, or the json file pointer is nil. Use JsonSeedReader constructor to first initiliaze the reader.
 func (jsr *jsonSeedReader) Read() ([]map[string]interface{}, error) {
 	if jsr.jsonF == nil {
 		return nil, fmt.Errorf("nil json, cannot read")
@@ -35,7 +35,8 @@ func (jsr *jsonSeedReader) Read() ([]map[string]interface{}, error) {
 		return nil, err
 	}
 	// data is owned by the writer
-	result := []map[string]interface{}{} // irrespective of the type of the data
+	// data type is irrespective of the type of the data that gets pushed in the database
+	result := []map[string]interface{}{}
 	if err := json.Unmarshal(byt, &result); err != nil {
 		return nil, err
 	}
