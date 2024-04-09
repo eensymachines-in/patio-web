@@ -140,7 +140,7 @@
             $scope.submit = function () {
                 console.log($scope.settings);
                 $http({
-                    method: 'put',
+                    method: 'patch',
                     url: '/api/devices/' + $routeParams.deviceID +'/config',
                     data: $scope.settings,
                     headers: {
