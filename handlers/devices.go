@@ -145,7 +145,7 @@ func HndlDevices(c *gin.Context) {
 	defer mongoClient.Disconnect(context.Background())
 
 	if c.Request.Method == "POST" { // when the device on the ground seeks register itself
-		device := devices.Device{} // resultant device, or the device being inserted
+		device := devices.Device{Config: aquacfg.AppConfig{}} // resultant device, or the device being inserted
 		if err := c.ShouldBind(&device); err != nil {
 			httperr.HttpErrOrOkDispatch(c, httperr.ErrBinding(fmt.Errorf("failed to read device from payload")), log.WithFields(log.Fields{
 				"stack": "HndlDevices",
