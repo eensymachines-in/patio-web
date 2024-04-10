@@ -8,6 +8,7 @@ import (
 
 	"github.com/eensymachines-in/patio-web/httperr"
 	"github.com/eensymachines-in/patio/aquacfg"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
@@ -50,6 +51,9 @@ func (dc *DevicesCollection) AddDevice(d *Device) httperr.HttpErr {
 		return httperr.DuplicateResourceErr(fmt.Errorf("device with mac %s already registered, cannot register again", d.Mac))
 	}
 	if !d.Mac.IsValid() {
+		logrus.WithFields(logrus.Fields{
+			"mac": d.Mac,
+		}).Debug("Invalid MAC id for device")
 		return httperr.ErrValidation(fmt.Errorf("device mac id %s is found to be invalid", d.Mac))
 	}
 	ir, err := dc.DbColl.InsertOne(ctx, d)

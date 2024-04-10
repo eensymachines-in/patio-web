@@ -152,6 +152,12 @@ func HndlDevices(c *gin.Context) {
 			}))
 			return
 		}
+		log.WithFields(log.Fields{
+			"mac":      device.Mac,
+			"name":     device.Name,
+			"location": device.Location,
+			"make":     device.Make,
+		}).Debug("new device to add")
 		err := dc.AddDevice(&device) // adds a new device to the registered device
 		if err != nil {
 			httperr.HttpErrOrOkDispatch(c, err, log.WithFields(log.Fields{
