@@ -18,7 +18,7 @@
                } else {
                     $http({
                         method: 'get',
-                        url: '/api/authorize',
+                        url: _userauth_baseurl+'?action=auth',
                         headers: {
                             "Authorization": tok
                         },
@@ -60,7 +60,9 @@
                 }
                 $http ({
                     method:'get',
-                    url: '/api/users/'+ $window.localStorage.getItem("user-id") + '/devices',
+                    // example url to get all the devices for the user email kneerunjun@gmail.com
+                    // http://aqua.eensymachines.in:30001/api/devices?filter=users&user=kneerunjun@gmail.com
+                    url: _devicereg_baseurl+'?filter=users&user='+$window.localStorage.getItem("user-email"),
                 }).then(function(response){
                     console.log("received data for user devices");
                     // what we receive is an [] of dedvice objects

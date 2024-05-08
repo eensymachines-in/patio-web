@@ -2,7 +2,7 @@
     angular.module("patio-app").controller("loginCtrl", function ($scope, $http, $location, $window) {
         $scope.loginErr = null
         $scope.validationErr = false
-        var clear_session = function(){
+        var clear_session = function () {
             $window.localStorage.removeItem("user-id");
             $window.localStorage.removeItem("user-email");
             $window.localStorage.removeItem("user-name");
@@ -23,12 +23,12 @@
                     return
                 }
                 $http({
-                    method: 'post',
-                    url: '/api/login',
-                    data: { email: this.usrid, auth: this.passwd }, 
+                    method:'post',
+                    url: _userauth_baseurl +'?action=auth',
+                    data: {email: this.usrid, auth: this.passwd},
                     headers: {
-                        'Content-Type': "application/json"
-                    },
+                        'Content-Type': 'application/json'
+                    }
                 }).then(function (response) {
                     // Instead of the sessionStorage we are using localStorage since when on the same browser we want to carry ahead the login token to a new tab on the same browser 
                     $window.localStorage.setItem("user-id", response.data.id);
@@ -40,7 +40,7 @@
                     // BUG: look into the article and find out why storing tokens in localstorage isnt a good idea
                     // For now we are just going ahead with the idea of having everything on localstorage 
                     $window.localStorage.setItem("user-authtok", response.data.authtok);
-                    $location.url("/users/"+response.data.id+"/devices") // device listing page where user can select the devices under his control
+                    $location.url("/users/" + response.data.id + "/devices") // device listing page where user can select the devices under his control
                 }, function (response) {
                     if (response.status == 401) {
                         // when the credentials dont match or credentials dont exists 
@@ -73,10 +73,10 @@
                 "53", "54", "55", "56", "57", "58", "59"
             ]
             $scope.configOptions = [
-                { opt: 0, txt: "Tick Every Interval", note: "One trigger after every interval, time of the day is irrelevant.", exmp:"Example: ON for 50 seconds, followed by OFF for 50 seconds (interval) in an infinite cycle." },
-                { opt: 1, txt: "Tick Every Day At", note: "One trigger at specific time of day, interval is irrelevant.", exmp:"Example: ON at 10:00 one day, OFF the next day at 10:00 in an infinite cycle." },
-                { opt: 2, txt: "Pulse Every Interval", note: "Two triggers separated by pulse gap after every interval.", exmp:"Example: ON for 50 seconds (pulse), OFF for 30 seconds, repeat after every 80 seconds (interval) in an infinite cycle." },
-                { opt: 3, txt: "Pulse Every Day At", note: "Two triggers separated by pulse gap at specific time of the day", exmp:"Example: ON for 50 seconds, (pulse) OFF after that every day at 10:00, repeat for each day." }
+                { opt: 0, txt: "Tick Every Interval", note: "One trigger after every interval, time of the day is irrelevant.", exmp: "Example: ON for 50 seconds, followed by OFF for 50 seconds (interval) in an infinite cycle." },
+                { opt: 1, txt: "Tick Every Day At", note: "One trigger at specific time of day, interval is irrelevant.", exmp: "Example: ON at 10:00 one day, OFF the next day at 10:00 in an infinite cycle." },
+                { opt: 2, txt: "Pulse Every Interval", note: "Two triggers separated by pulse gap after every interval.", exmp: "Example: ON for 50 seconds (pulse), OFF for 30 seconds, repeat after every 80 seconds (interval) in an infinite cycle." },
+                { opt: 3, txt: "Pulse Every Day At", note: "Two triggers separated by pulse gap at specific time of the day", exmp: "Example: ON for 50 seconds, (pulse) OFF after that every day at 10:00, repeat for each day." }
             ]
             $scope.viewModel = { // the model that we used to communicate to the view 
                 // viewModel is populated with dedfault values, but when the settings are downloaded this will actual current values
@@ -141,16 +141,16 @@
                 console.log($scope.settings);
                 $http({
                     method: 'patch',
-                    url: '/api/devices/' + $routeParams.deviceID +'/config',
+                    url: _devicereg_baseurl +'/'+ $routeParams.deviceID + '?path=config&action=replace',
                     data: $scope.settings,
                     headers: {
                         'Content-Type': "application/json"
                     },
-                }).then(function(response){
+                }).then(function (response) {
                     console.log("done! settings have been updated", response);
                     $route.reload(); // reload the same settings page 
-                }, function(response){
-                    if (response.status == 400){
+                }, function (response) {
+                    if (response.status == 400) {
                         console.error("Bad request updating the device configuration, ")
                     }
                     console.log("failed ! settings could not be updated");
@@ -159,29 +159,29 @@
             // Getting the current settings to start with 
             $http({
                 method: 'get',
-                url: '/api/devices/'+$routeParams.deviceID+'/config',
+                url: _devicereg_baseurl +'/'+ $routeParams.deviceID ,
             }).then(function (response) {
                 console.log("received current settings from the server", response.data);
                 $scope.configOptions.forEach(e => {
-                    if (e.opt == response.data.config) {
+                    if (e.opt == response.data.cfg.config) {
                         console.log("found matching config option..")
                         $scope.viewModel.CfgOpt = e;
                         return
                     }
                 })
 
-                $scope.viewModel.clock= {hr: response.data.tickat.split(":")[0], min :response.data.tickat.split(":")[1]};
-                $scope.viewModel.pulsegap = response.data.pulsegap;
-                $scope.viewModel.interval  = response.data.interval;
+                $scope.viewModel.clock = { hr: response.data.cfg.tickat.split(":")[0], min: response.data.cfg.tickat.split(":")[1] };
+                $scope.viewModel.pulsegap = response.data.cfg.pulsegap;
+                $scope.viewModel.interval = response.data.cfg.interval;
 
-                $timeout(function(){
+                $timeout(function () {
                     console.log("viewmodel to settings ...");
-                    console.log( $scope.settings);
+                    console.log($scope.settings);
                 }, 500)
             }, function (response) {
                 console.error("failed to get settings from the device..")
                 console.log(response.status)
             })
-            
+
         })
 })();

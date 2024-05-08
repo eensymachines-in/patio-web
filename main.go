@@ -1,26 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 
-	"github.com/eensymachines-in/patio-web/handlers"
-	"github.com/eensymachines-in/patio-web/seeding"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	webpages      = "web/*.html"
-	testDeviceUid = "705b200f-059b-4630-bf3d-5d55c3a4a9dc" // this is when we havent got the device registered on the server
-)
-
-var (
-	db_USER   string
-	db_PASSWD string
-	db_SERVER string = "srv_mongo"
+	webpages = "web/*.html"
 )
 
 func init() { // logging setup
@@ -53,71 +42,19 @@ func init() { // logging setup
 	} else {
 		log.SetLevel(log.DebugLevel) // for production
 	}
-	fromSecretFile := func(path string) (string, error) {
-		f, err := os.Open(path)
-		if err != nil {
-			return "", fmt.Errorf("error opening the secrets file")
-		}
-		byt, err := io.ReadAll(f)
-		if err != nil {
-			return "", fmt.Errorf("error reading the secrets file")
-		}
-		return string(byt), nil
-	}
-	// Getting db credentials
-	data := map[string]string{
-		"userid": "/run/secrets/db_root_username",
-		"passwd": "/run/secrets/db_root_password",
-	}
-	var err error
-	db_USER, err = fromSecretFile(data["userid"])
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("failed to load database credentials from secrets file")
-	} // loaded user for database login
-	db_PASSWD, err = fromSecretFile(data["passwd"])
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("failed to load database credentials from secrets file")
-	} // loaded pw for database login
-
-	/* ===============
-	Getting the seed readers ready
-	Seed readers with underlying json files
-	==================*/
-
-	rdr, err := seeding.JsonSeedReader("./seeding/devices.json")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Errorf("failed to read devices seeding json file, aborting seeding")
-	}
-	sdr, err := seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "devices")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Errorf("error creating a new mongo seeder")
-	}
-	seeding.RunSeed(rdr, sdr)
-
-	rdr, err = seeding.JsonSeedReader("./seeding/users.json")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Errorf("failed to read devices seeding json file, aborting seeding")
-	}
-	sdr, err = seeding.MongoSeeder(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME"), "users")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Errorf("error creating a new mongo seeder")
-	}
-	seeding.RunSeed(rdr, sdr)
-
 }
 
+/*
+	serveIndexPage : one place common to send out the index page, base page to the angular app on the client
+
+Angular works as SPA but uses this as the base for further loading all the page content
+*/
+func serveIndexPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"usrauth_baseurl":   "http://aqua.eensymachines.in:30002/api/users",
+		"devicereg_baseurl": "http://aqua.eensymachines.in:30001/api/devices",
+	})
+}
 func main() {
 	log.Info("Now starting the patio-web program..")
 	defer log.Warn("Now closing the patio-web program...")
@@ -127,34 +64,9 @@ func main() {
 	r.LoadHTMLGlob(webpages) // for static content , define all the web content delivery only after this
 	r.Static("/assets", "./web/assets/")
 
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-	r.GET("/devices/:deviceID/config", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-	r.GET("/users/:id/devices", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-	api := r.Group("/api")
-	api.Use(handlers.CORS).Use(handlers.MongoConnect(db_SERVER, db_USER, db_PASSWD, os.Getenv("MONGO_DB_NAME")))
-	api.POST("/login", handlers.HndlUserAuth)
-	api.GET("/authorize", handlers.HndlUserAuth)
-
-	users := api.Group("/users")
-	users.GET("/:userid/devices", handlers.SingleUserOfID, handlers.HndlUserDevices) // gets the list of devices that the user has acess to
-	users.DELETE("/:userid", handlers.SingleUserOfID, handlers.HndlUsers)            // single account delete
-	users.PATCH("/:userid", handlers.SingleUserOfID, handlers.HndlUsers)             // single account alter
-	users.POST("/", handlers.HndlUsers)                                              // can create new users
-
-	// ------------ CRUD device configurations -------
-	devices := api.Group("/devices")
-	devices.GET("/:uid/config", handlers.HndlDeviceConfig)                                                           // getting existing device configuration on server
-	devices.PATCH("/:uid/config", handlers.RabbitConnectWithChn(os.Getenv("AMQP_QNAME")), handlers.HndlDeviceConfig) // updating device configuration on server
-	devices.PATCH("/:uid/users", handlers.HndlUserDevices)                                                           // updating device configuration on server
-	devices.GET("/:uid", handlers.HndlDevices)                                                                       // details of the single user
-	devices.DELETE("/:uid", handlers.HndlDevices)                                                                    // deleting device registration clean , non recoverable
-	devices.POST("/", handlers.HndlDevices)                                                                          // new devices registration
+	r.GET("/", serveIndexPage)
+	r.GET("/devices/:deviceID/config", serveIndexPage)
+	r.GET("/users/:id/devices", serveIndexPage)
 
 	log.Fatal(r.Run(":8080"))
 }
