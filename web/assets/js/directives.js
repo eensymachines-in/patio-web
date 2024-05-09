@@ -1,5 +1,30 @@
 (function(){
     angular.module("patio-app")
+    .directive("submitButton", function(){
+        return {
+            restrict: "E",
+            scope: {
+                submitnow: '&',
+                submitdone: "="
+            },
+            templateUrl: "/assets/templates/submit-btn.html",
+            controller: function($scope) {
+                $scope.pending = false;
+                console.log("We are inside the submit button");
+                $scope.presubmit = function(){
+                    $scope.pending = true; 
+                    $scope.submitnow();
+                    /* do not set this pending=false since submit now has asynch code that return immediately even before the response is received.
+                    pending = false is set only revisitng the page and directive is reloaded */
+                }
+                $scope.$watch('submitdone', function(after, before){
+                    if (after !== undefined && after ==true)  {
+                        $scope.pending = false;
+                    }
+                })
+            }
+        }
+    })
     .directive("authorizedUser", function(){
         /*A simple attribute level directive that when inserted on the top level of a view can make sure to 
         check the token validity with the server and if invalid can redirect the page to login

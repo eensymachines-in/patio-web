@@ -17,28 +17,26 @@
     <form>
         <fieldset>
             <div class="form-group">
-                <label for="exampleInputEmail1">User ID</label>
+                <h5><label for="exampleInputPassword1"> <i class="bi bi-envelope-at"></i>&nbsp;Email</label></h5>
                 <input  
                 ng-model="login.usrid" 
                 type="text" class="form-control" 
                 ng-class="{true:'is-invalid'}[validationErr==true && login.usrid=='']"
                 id="exampleInputEmail1"
-                aria-describedby="emailHelp" placeholder="Enter ID">
+                aria-describedby="emailHelp">
             </div>
             <div class="form-group">
-                <label for="exampleInputPassword1">Password</label>
-                <input ng-model="login.passwd" type="password" 
-                class="form-control" id="exampleInputPassword1"
-                ng-class="{true:'is-invalid'}[validationErr==true && login.passwd=='']"
-                placeholder="Password">
+                <h5><label for="exampleInputPassword1"><i class="bi bi-key-fill"></i>&nbsp;Password</label></h5>
+                <input ng-model="login.passwd" type="password" class="form-control" id="exampleInputPassword1"
+                    ng-class="{true:'is-invalid'}[validationErr==true && login.passwd=='']">
             </div>
-            
-            <button 
+            <submit-button submitnow="login.submit()" submitdone="done"></submit-button>
+            <!-- <button 
             ng-click="login.submit()" 
             type="submit" class="btn btn-outline-primary"
             >
                 <i class="fas fa-sign-in-alt"></i> Sign In
-            </button>
+            </button> -->
         </fieldset>
     </form>
     <div class="alert alert-dismissible alert-warning mt-4" ng-show="loginErr">

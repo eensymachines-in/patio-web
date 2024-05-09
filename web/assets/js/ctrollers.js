@@ -10,6 +10,7 @@
             $window.localStorage.removeItem("user-telegid");
             $window.localStorage.removeItem("user-authtok");
         }; clear_session();
+        $scope.done = false; // this indicates to the directive below that the submit process is complete 
         $scope.login = {
             usrid: "",
             passwd: "",
@@ -20,6 +21,7 @@
 
                 if (this.usrid == "" || this.passwd == "") {
                     $scope.validationErr = true;
+                    $scope.done = true; // directives would not be concerned if the submit per say is called, only gets to know the action is done
                     return
                 }
                 $http({
@@ -40,7 +42,9 @@
                     // BUG: look into the article and find out why storing tokens in localstorage isnt a good idea
                     // For now we are just going ahead with the idea of having everything on localstorage 
                     $window.localStorage.setItem("user-authtok", response.data.authtok);
+                    $scope.done = true;
                     $location.url("/users/" + response.data.id + "/devices") // device listing page where user can select the devices under his control
+                    
                 }, function (response) {
                     if (response.status == 401) {
                         // when the credentials dont match or credentials dont exists 
@@ -56,6 +60,7 @@
                             msg: "Something went wrong on the server, and we have no idea what!"
                         }
                     }
+                    $scope.done = true;
                 })
             }
         }
