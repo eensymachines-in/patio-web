@@ -1,42 +1,50 @@
 <div class="container mt-3">
-    <div class="jumbotron">
-        <h1 class="display-3">Eensy Aquaponics <small> <i class="fas fa-seedling text-success"></i> <i
-                    class="fas fa-fish text-info"></i></small></h1>
-        <p class="lead">Soiless urban farming setup. Technology assisted farming of the future</p>
+    <div class="jumbotron d-block">
+        <h1 class="d-none d-md-block">Aquaponics <small>
+                <i class="fas fa-seedling text-success"></i>
+                <i class="fas fa-fish text-info"></i></small>
+        </h1>
+        <h3 class="d-block d-md-none">Aquaponics <small>
+                <i class="fas fa-seedling text-success"></i>
+                <i class="fas fa-fish text-info"></i></small>
+        </h3>
         <hr class="my-4">
-        <p>What started as a small hobby setup in a farmhouse backyard, has grown into a serious business of food
-            production. We use digital technology aided by electronic sensors on the ground to remote control the
-            ecosystem.</p>
-        <p class="lead">
-            <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+        <p class="text-primary d-none d-lg-block">
+            Experience the cutting-edge frontier of urban agriculture with our innovative Soiless Urban Farming Setup.
+            This visionary approach integrates advanced technology to revolutionize farming practices, offering a
+            glimpse into the future of sustainable agriculture. Our solution combines precision farming techniques with
+            state-of-the-art automation and data analytics, empowering growers to cultivate crops efficiently, maximize
+            yields, and minimize environmental impact in urban environments
+        </p>
+        <p class="text-primary d-block d-lg-none">
+            Experience the cutting-edge frontier of urban agriculture with our innovative Soiless Urban Farming Setup.
+            Our solution combines precision farming techniques with state-of-the-art automation and data analytics.
+        </p>
+        <p class="lead mt-4">
+            <a class="btn  btn-outline-primary btn-md" href="#" role="button">Learn &nbsp; <i
+                    class="bi bi-three-dots"></i></a>
         </p>
     </div>
 </div>
-
 <div class="container" ng-controller="loginCtrl">
     <form>
         <fieldset>
             <div class="form-group">
                 <h5><label for="exampleInputPassword1"> <i class="bi bi-envelope-at"></i>&nbsp;Email</label></h5>
-                <input  
-                ng-model="login.usrid" 
-                type="text" class="form-control" 
-                ng-class="{true:'is-invalid'}[validationErr==true && login.usrid=='']"
-                id="exampleInputEmail1"
-                aria-describedby="emailHelp">
+                <input ng-model="login.usrid" type="text" class="form-control"
+                    ng-class="{true:'is-invalid'}[validationErr==true && login.usrid=='']" id="exampleInputEmail1"
+                    aria-describedby="emailHelp">
             </div>
             <div class="form-group">
                 <h5><label for="exampleInputPassword1"><i class="bi bi-key-fill"></i>&nbsp;Password</label></h5>
                 <input ng-model="login.passwd" type="password" class="form-control" id="exampleInputPassword1"
                     ng-class="{true:'is-invalid'}[validationErr==true && login.passwd=='']">
             </div>
-            <submit-button submitnow="login.submit()" submitdone="done"></submit-button>
-            <!-- <button 
-            ng-click="login.submit()" 
-            type="submit" class="btn btn-outline-primary"
-            >
-                <i class="fas fa-sign-in-alt"></i> Sign In
-            </button> -->
+            <div class="d-flex justify-content-between">
+                <submit-button submitnow="login.submit()" submitdone="done" btntext="Login"></submit-button>
+                <submit-button submitnow="login.gotoSingup()" submitdone="movingaway" btntext="Signup"
+                    isoutline="true"></submit-button>
+            </div>
         </fieldset>
     </form>
     <div class="alert alert-dismissible alert-warning mt-4" ng-show="loginErr">
@@ -45,3 +53,71 @@
         <p class="mb-0">{[loginErr.msg]}</p>
     </div>
 </div>
+
+<!-- Footer -->
+<div class="container mt-5">
+    <footer class="text-center text-lg-start bg-body-tertiary text-muted">
+        <!-- Section: Social media -->
+        <section class="d-flex justify-content-center border-bottom display-5">
+            <div class="d-flex">
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-facebook-f"></i></h4>
+                </a>
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-twitter"></i></h4>
+                </a>
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-google"></i></h4>
+                </a>
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-instagram"></i></h4>
+                </a>
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-linkedin"></i></h4>
+                </a>
+                <a href="" class="text-primary p-2">
+                    <h4><i class="fab fa-github"></i></h4>
+                </a>
+            </div>
+        </section>
+        <section class="d-flex   justify-content-center justify-content-lg-between mt-3">
+            <div class="row">
+                <div class="col-12 col-md-4 p-3">
+                    <span class="text-primary"><i class="bi bi-c-circle"></i>&nbsp;Eensy Machines</span>
+                    <hr>
+                    <p>Eensy Machines is a home automation enterprise offering comprehensive solutions for household
+                        automation challenges. Our offerings encompass hardware, cloud-based solutions, and the
+                        flexibility to control your automation system from any location.
+                    </p>
+                </div>
+                <div class="col-12 col-md-4 p-3">
+                    <span class="text-primary">Aquaponics @ Saidham</span>
+                    <hr>
+                    <p>At Saidham, we are actively exploring modern agricultural methods to develop prototypes inspired
+                        by the principles of aquaponics and soilless farming. Our goal is to democratize urban farming,
+                        making it accessible to a wider audience.
+                    </p>
+                </div>
+                <div class="col-12 col-md-4 p-3">
+                    <span class="text-primary"><i class="bi bi-telephone"></i>&nbsp;<i
+                            class="bi bi-envelope-paper"></i>&nbsp;Contact</span>
+                    <hr>
+                    <span class="d-block">&nbsp;+91&nbsp;8390&nbsp;30&nbsp;2622</span>
+                    <span class="d-block">aquaponics@eensymachines.in</span>
+                    <span>Pune-411025</span><br>
+                    <span>Maharashtra</span>
+                </div>
+            </div>
+        </section>
+        <hr>
+        <section class="justify-content-center mt-3">
+            <h4 class="d-block display-5 text-success"><i class="bi bi-shield-check"></i>&nbsp;Trust</h4>
+            <p class="text-muted">At Eensy Machines, safeguarding your privacy and ensuring the security of your data is
+                our top priority. We employ robust encryption protocols and industry-standard security measures to
+                protect your information against unauthorized access, misuse, or alteration. <a href="">Terms &
+                    Conditions</a></p>
+        </section>
+    </footer>
+</div>
+
+<!--   -->

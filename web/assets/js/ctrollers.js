@@ -11,6 +11,7 @@
             $window.localStorage.removeItem("user-authtok");
         }; clear_session();
         $scope.done = false; // this indicates to the directive below that the submit process is complete 
+        $scope.movingaway = false;
         $scope.login = {
             usrid: "",
             passwd: "",
@@ -63,6 +64,10 @@
                     $scope.done = true;
                 })
             }
+        }
+        $scope.gotoSingup = function(){
+            $scope.movingaway = true;
+            // $location.url("/signup");
         }
     })
         .controller("settingsCtrl", function ($scope, $http, $timeout, $route, $routeParams) {

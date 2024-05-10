@@ -5,12 +5,15 @@
             restrict: "E",
             scope: {
                 submitnow: '&',
-                submitdone: "="
+                submitdone: "=",
+                btntext:"@",
+                isoutline:"@" // determines the outline of the button
             },
             templateUrl: "/assets/templates/submit-btn.html",
             controller: function($scope) {
+                console.log("indside the submit button" + $scope.btntext);
                 $scope.pending = false;
-                console.log("We are inside the submit button");
+                $scope.outline = ($scope.isoutline == "true");
                 $scope.presubmit = function(){
                     $scope.pending = true; 
                     $scope.submitnow();
@@ -18,6 +21,7 @@
                     pending = false is set only revisitng the page and directive is reloaded */
                 }
                 $scope.$watch('submitdone', function(after, before){
+                    /* This directive isnt per say concerned about if the submit was successful / failure it only seeks acknowledgement of the action completion Even if the validation fails and the ACTUAL actin is never executed this would only want to know when it completes */
                     if (after !== undefined && after ==true)  {
                         $scope.pending = false;
                     }
