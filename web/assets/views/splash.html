@@ -43,7 +43,7 @@
             <div class="d-flex justify-content-between">
                 <submit-button submitnow="login.submit()" submitdone="done" btntext="Login"></submit-button>
                 <submit-button submitnow="login.gotoSingup()" submitdone="movingaway" btntext="Signup"
-                    isoutline="true"></submit-button>
+                    outlined></submit-button>
             </div>
         </fieldset>
     </form>
@@ -52,7 +52,9 @@
         <h4 class="alert-heading">Ooops!</h4>
         <p class="mb-0">{[loginErr.msg]}</p>
     </div>
+    <fail-modal></fail-modal>
 </div>
+
 
 <!-- Footer -->
 <div class="container mt-5">
@@ -114,7 +116,7 @@
             <h4 class="d-block display-5 text-success"><i class="bi bi-shield-check"></i>&nbsp;Trust</h4>
             <p class="text-muted">At Eensy Machines, safeguarding your privacy and ensuring the security of your data is
                 our top priority. We employ robust encryption protocols and industry-standard security measures to
-                protect your information against unauthorized access, misuse, or alteration. <a href="">Terms &
+                protect your information against unauthorized access, misuse, or alteration. <a href="/terms-conditions">Terms &
                     Conditions</a></p>
         </section>
     </footer>

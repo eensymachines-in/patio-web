@@ -1,6 +1,6 @@
 (function () {
-    angular.module("patio-app").controller("loginCtrl", function ($scope, $http, $location, $window) {
-        $scope.loginErr = null
+    angular.module("patio-app").controller("loginCtrl", function ($scope, $http, $location, $window, $sce) {
+        // $scope.loginErr = null;
         $scope.validationErr = false
         var clear_session = function () {
             $window.localStorage.removeItem("user-id");
@@ -48,20 +48,16 @@
                     
                 }, function (response) {
                     if (response.status == 401) {
-                        // when the credentials dont match or credentials dont exists 
-                        $scope.loginErr = {
-                            msg: "Either your credentials did not match or you arent registered on the system"
-                        }
+                        // A error modal will indicate the password did not match the records
+                        $scope.fMsg =$sce.trustAsHtml("<p>Credentials did not match our records, check and send again</p>");
                     } else if (response.status == 500) {
-                        $scope.loginErr = {
-                            msg: "One or more things on the server failed, couldnt sign in"
-                        }
+                        // again showing the error modal with a appropriate message
+                        $scope.fMsg =$sce.trustAsHtml("<p>One or more things on the server went wrong.Wait a while before you try again.</p>");
                     } else {
-                        $scope.loginErr = {
-                            msg: "Something went wrong on the server, and we have no idea what!"
-                        }
+                        $scope.fMsg =$sce.trustAsHtml("<p>Something on the server went wrong and we have no idea what.</p> <p>Time to call an administrator</p>");
                     }
                     $scope.done = true;
+                    $("#failModal").modal('show'); // finally the error modal comes up
                 })
             }
         }
@@ -70,7 +66,8 @@
             // $location.url("/signup");
         }
     })
-        .controller("settingsCtrl", function ($scope, $http, $timeout, $route, $routeParams) {
+        .controller("settingsCtrl", function ($scope, $http, $timeout, $routeParams, $sce) {
+            $scope.sMsg = ""; // success message for the modal when the operation is success 
             $scope.hrOptions = [
                 "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12",
                 "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"
@@ -147,6 +144,8 @@
                     $scope.settings.tickat = after.hr + ":" + after.min;
                 }
             }, true) // its a deep watch since we want to track the properties
+            $scope.updateDone = false; // as an indicator that changes have been submitted to the device
+            /* Irrespective of whether its a success response or not this will basically iindicate that the http action is done */
             $scope.submit = function () {
                 console.log($scope.settings);
                 $http({
@@ -158,12 +157,18 @@
                     },
                 }).then(function (response) {
                     console.log("done! settings have been updated", response);
-                    $route.reload(); // reload the same settings page 
+                    $scope.updateDone = true;
+                    $scope.sMsg = $sce.trustAsHtml("<p>Device configuration is modified!<br>If the device is online changes would reflect instanteneous</p>");
+                    $("#successModal").modal('show');
+                    // $route.reload(); // reload the same settings page 
                 }, function (response) {
+                    $scope.updateDone = true;
                     if (response.status == 400) {
-                        console.error("Bad request updating the device configuration, ")
+                        console.error("Bad request updating the device configuration" + response);
                     }
-                    console.log("failed ! settings could not be updated");
+                    console.error(response + "failed ! settings could not be updated");
+                    $scope.fMsg =$sce.trustAsHtml("Device configuration could not be updated. Contact the administrator to know more");
+                    $("#failModal").modal('show'); // finally the error modal comes up
                 })
             }
             // Getting the current settings to start with 
@@ -179,7 +184,6 @@
                         return
                     }
                 })
-
                 $scope.viewModel.clock = { hr: response.data.cfg.tickat.split(":")[0], min: response.data.cfg.tickat.split(":")[1] };
                 $scope.viewModel.pulsegap = response.data.cfg.pulsegap;
                 $scope.viewModel.interval = response.data.cfg.interval;
@@ -189,8 +193,14 @@
                     console.log($scope.settings);
                 }, 500)
             }, function (response) {
-                console.error("failed to get settings from the device..")
-                console.log(response.status)
+                if (response.status == 404) {
+                    $scope.fMsg =$sce.trustAsHtml("<p>Device you were looking for is not found registered on our records</p>");
+                } else if (response.status == 500) {
+                    $scope.fMsg =$sce.trustAsHtml("<p>One or more things on the server went wrong.Wait a while before you try again.</p>");
+                } else if (response.status == 400) {
+                    $scope.fMsg =$sce.trustAsHtml("<p>Unexpected request params caused this. Time to call an administrator</p>");
+                }
+                $("#failModal").modal('show'); // finally the error modal comes up
             })
 
         })

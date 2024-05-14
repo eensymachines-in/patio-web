@@ -1,4 +1,6 @@
-<button class="btn" ng-class="{true:'btn-outline-info', false:'btn-info'}[outline==true]" ng-click="presubmit()" ng-disabled="pending==true">
+<button class="btn" 
+ng-class="{'btn-outline-info':outline, 'btn-info':!outline, 'btn-block':blockbtn}"
+ng-click="presubmit()" ng-disabled="pending==true">
     <span ng-hide="pending==true">{[btntext]} &nbsp; <i class="bi bi-send"></i></span>
     <span ng-show="pending==true"><i class="fas fa-spinner fa-spin"></i></span>
 </button> 

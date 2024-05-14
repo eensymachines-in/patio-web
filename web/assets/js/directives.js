@@ -1,5 +1,36 @@
 (function(){
     angular.module("patio-app")
+    .directive("failModal", function(){
+        return {
+            restrict: "E",
+            scope: true, 
+            templateUrl: "/assets/templates/fail-modal.html",
+            controller: function($scope, $route) {
+                console.log("inside the success modal");
+                /* There isnt anything to be done in case failure modal is out of scope */
+                // $('#failModal').on('hidden.bs.modal',function(){
+                //     $scope.$apply(function(){
+                //         $route.reload();
+                //     });
+                // })
+            }
+        }
+    })
+    .directive("successModal", function(){
+        return {
+            restrict: "E",
+            scope: true, 
+            templateUrl: "/assets/templates/success-modal.html",
+            controller: function($scope, $route) {
+                console.log("inside the success modal");
+                $('#successModal').on('hidden.bs.modal',function(){
+                    $scope.$apply(function(){
+                        $route.reload();
+                    });
+                })
+            }
+        }
+    })
     .directive("submitButton", function(){
         return {
             restrict: "E",
@@ -10,10 +41,23 @@
                 isoutline:"@" // determines the outline of the button
             },
             templateUrl: "/assets/templates/submit-btn.html",
+            compile: function(){
+                return {
+                    pre: function(scope, ele, attrs){
+                        /* Reading the attributes in the directive manifestation, this helps define the scoped vaiable for the various classes  */
+                        if (attrs.outlined !== undefined) {
+                            scope.outline = true;
+                        }
+                        if (attrs.blockbtn !== undefined)  {
+                            scope.blockbtn = true;
+                        }
+                    }
+                }
+            },
             controller: function($scope) {
                 console.log("indside the submit button" + $scope.btntext);
                 $scope.pending = false;
-                $scope.outline = ($scope.isoutline == "true");
+                // $scope.outline = ($scope.isoutline == "true");
                 $scope.presubmit = function(){
                     $scope.pending = true; 
                     $scope.submitnow();

@@ -67,6 +67,7 @@ func main() {
 	r.GET("/", serveIndexPage)
 	r.GET("/devices/:deviceID/config", serveIndexPage)
 	r.GET("/users/:id/devices", serveIndexPage)
+	r.GET("/terms-conditions", serveIndexPage)
 
 	log.Fatal(r.Run(":8080"))
 }

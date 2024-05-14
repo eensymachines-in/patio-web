@@ -1,6 +1,6 @@
 (function() {
     // Define the angular application 
-    angular.module("patio-app", ["ngRoute"]).config(function($interpolateProvider, $locationProvider, $routeProvider, $provide) {
+    angular.module("patio-app", ['ngRoute']).config(function($interpolateProvider, $locationProvider, $routeProvider, $provide) {
         $interpolateProvider.startSymbol("{[")
         $interpolateProvider.endSymbol("]}")
         $locationProvider.html5Mode({
@@ -15,6 +15,8 @@
                 templateUrl: "/assets/views/settings.html"
             }).when("/users/:userID/devices", {
                 templateUrl: "/assets/views/user_devices.html"
+            }).when("/terms-conditions", {
+                templateUrl: "/assets/views/terms_conditions.html"
             });
 
         $provide.provider("emailPattern", function() {
