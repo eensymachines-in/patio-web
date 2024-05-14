@@ -7,7 +7,8 @@
         <h4 class="card-title">{[d.name]}</h4>
         <h6 class="card-subtitle mb-2 text-muted">{[d.mac]}</h6>
         <p class="card-text">{[d.make]}</p>
-        <a ng-show="d.link" href="/devices/{[d.mac]}" class="card-link">Edit device</a>
-        <a ng-show="d.link" href="/devices/{[d.mac]}/config" class="card-link">Configure device</a>
+        <!-- for now we are not looking at a funcitonality that can change the device registration -->
+        <!-- <a ng-show="d.link" href="/devices/{[d.mac]}" class="card-link">Edit device</a> -->
+        <a ng-show="d.link" role="button" href="/devices/{[d.mac]}/config" class="card-link btn btn-outline-info"><i class="bi bi-wrench-adjustable-circle"></i>&nbsp;Configure</a>
     </div>
 </div>
